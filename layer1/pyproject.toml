@@ -1,0 +1,38 @@
+[project]
+name = "ioa-layer1"
+version = "0.1.0"
+description = "IOA Intelligence Briefing — Layer 1: Collection"
+requires-python = ">=3.11"
+dependencies = [
+    "feedparser>=6.0.11",
+    "requests>=2.32.3",
+    "beautifulsoup4>=4.12.3",
+    "lxml>=5.3.0",
+    "pyyaml>=6.0.2",
+    "supabase>=2.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "pytest-httpretty>=0.2.0",   # mock HTTP requests in tests
+    "ruff>=0.4.0",                # linting
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+    "datasette>=0.65.0",
+]
+
+[tool.setuptools]
+py-modules = []
+
+# ── How to use ────────────────────────────────────────────────────────────────
+# Install uv:        curl -LsSf https://astral.sh/uv/install.sh | sh
+# Install deps:      uv sync
+# Run collector:     uv run python collect.py
+# Run single source: uv run python collect.py --source "Reuters Africa"
+# Run tests:         uv run pytest
+# Lint:              uv run ruff check .

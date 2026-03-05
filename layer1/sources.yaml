@@ -1,0 +1,2610 @@
+# IOA Intelligence Briefing — Source Registry
+# Layer 1: Collection Configuration
+#
+# Fields:
+#   name          — display name
+#   url           — homepage / index page
+#   rss_url       — RSS/Atom feed URL (null if scraper only)
+#   type          — rss | scraper | rss+scraper
+#   source_tier   — pan-africa | country-specific
+#   region        — pan-africa | southern-africa | north-africa | east-africa |
+#                   west-africa | central-africa | south-africa (ZA only)
+#   countries     — ISO 3166-1 alpha-2 list. Empty = all Africa. Used for
+#                   auto-tagging when LLM country detection is ambiguous.
+#   sectors       — list of sectors this source covers
+#   active        — true | false  (set false to pause without deleting)
+#   notes         — scraper hints, paywall status, dedup warnings etc.
+
+# ════════════════════════════════════════════════════════════════════════════
+# TIER 1 — PAN-AFRICA SOURCES (the original 30)
+# ════════════════════════════════════════════════════════════════════════════
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ════════════════════════════════════════════════════════════════════════════
+# TIER 2 — COUNTRY-SPECIFIC SOURCES
+# Add new country sources here as Zahra's team provides them.
+#
+# Key difference from Tier 1:
+#   - countries field is REQUIRED (at least one ISO code)
+#   - source_tier must be "country-specific"
+#   - The collector uses this to hard-tag articles at ingestion time,
+#     bypassing the need for LLM country detection on obvious sources
+#     (e.g. a Nigeria-only newspaper doesn't need AI to confirm it's NG)
+#   - This saves Haiku tokens in Layer 2 — country is pre-filled, AI only
+#     needs to classify sector + relevance
+# ════════════════════════════════════════════════════════════════════════════
+
+sources:
+- name: Reuters Africa
+  url: https://www.reuters.com/world/africa/
+  rss_url: https://feeds.reuters.com/reuters/AFRICANews
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  active: true
+  notes: Major wire service — high syndication risk, dedup aggressively
+- name: Al Jazeera Africa
+  url: https://www.aljazeera.com/africa/
+  rss_url: https://www.aljazeera.com/xml/rss/all.xml
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - politics
+  - security
+  - general
+  active: true
+  notes: Filter to /africa/ articles post-ingestion
+- name: Engineering News
+  url: https://www.engineeringnews.co.za/page/latest-news
+  rss_url: https://www.engineeringnews.co.za/rss/latest-news
+  type: rss+scraper
+  source_tier: pan-africa
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - infrastructure
+  - energy
+  - mining
+  - engineering
+  active: true
+  notes: Creamer Media — partial paywall on full articles, lede sufficient
+- name: BizCommunity Africa
+  url: https://www.bizcommunity.africa/
+  rss_url: https://www.bizcommunity.com/AboutRSS.aspx
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - business
+  - marketing
+  - finance
+  active: true
+- name: ITWeb South Africa
+  url: https://www.itweb.co.za/
+  rss_url: https://www.itweb.co.za/rss
+  type: rss
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - tech
+  - telecoms
+  active: true
+- name: ITWeb Africa
+  url: https://itweb.africa/
+  rss_url: https://itweb.africa/rss
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - tech
+  - telecoms
+  active: true
+  notes: Separate feed from itweb.co.za — both worth monitoring
+- name: MyBroadband
+  url: https://mybroadband.co.za/news/
+  rss_url: https://mybroadband.co.za/news/feed
+  type: rss
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - tech
+  - telecoms
+  - broadband
+  active: true
+- name: BusinessTech
+  url: https://businesstech.co.za/news/
+  rss_url: https://businesstech.co.za/feed
+  type: rss
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - business
+  - tech
+  - finance
+  active: true
+- name: Mining Weekly
+  url: https://www.miningweekly.com/page/home
+  rss_url: https://www.miningweekly.com/page/home/feed
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - mining
+  - resources
+  active: true
+- name: CNBC Africa
+  url: https://www.cnbcafrica.com/
+  rss_url: https://www.cnbcafrica.com/feed/
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - finance
+  - business
+  - economics
+  active: true
+- name: Morocco World News
+  url: https://www.moroccoworldnews.com/
+  rss_url: https://www.moroccoworldnews.com/feed
+  type: rss
+  source_tier: pan-africa
+  region: north-africa
+  countries:
+  - MA
+  sectors:
+  - all
+  active: true
+- name: Egypt Today
+  url: https://www.egypttoday.com/Section/News/1
+  rss_url: https://www.egypttoday.com/rss
+  type: rss+scraper
+  source_tier: pan-africa
+  region: north-africa
+  countries:
+  - EG
+  sectors:
+  - all
+  active: true
+- name: Zawya MENA
+  url: https://www.zawya.com/en/mena
+  rss_url: https://www.zawya.com/en/rss
+  type: rss+scraper
+  source_tier: pan-africa
+  region: north-africa
+  countries: []
+  sectors:
+  - finance
+  - business
+  - economics
+  active: true
+  notes: Soft paywall — headlines + ledes accessible, full text gated
+- name: ESI Africa
+  url: https://www.esi-africa.com/
+  rss_url: https://www.esi-africa.com/feed/
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - energy
+  - utilities
+  - power
+  active: true
+- name: Energy Capital & Power
+  url: https://energycapitalpower.com/
+  rss_url: https://energycapitalpower.com/feed/
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - energy
+  - oil-gas
+  - power
+  active: true
+- name: Mining Review Africa
+  url: https://www.miningreview.com/
+  rss_url: https://www.miningreview.com/feed/
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - mining
+  - resources
+  active: true
+- name: Developing Telecoms
+  url: https://developingtelecoms.com/
+  rss_url: https://developingtelecoms.com/feed
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - telecoms
+  - tech
+  active: true
+- name: North Africa Post
+  url: https://northafricapost.com/
+  rss_url: https://northafricapost.com/feed
+  type: rss
+  source_tier: pan-africa
+  region: north-africa
+  countries: []
+  sectors:
+  - politics
+  - business
+  - all
+  active: true
+- name: Polity Africa
+  url: https://www.polity.org.za/page/african-news
+  rss_url: https://www.polity.org.za/rss/african-news
+  type: rss+scraper
+  source_tier: pan-africa
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - politics
+  - policy
+  - governance
+  active: true
+- name: Freight News
+  url: https://www.freightnews.co.za/
+  rss_url: https://www.freightnews.co.za/feed
+  type: rss+scraper
+  source_tier: pan-africa
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - logistics
+  - infrastructure
+  - trade
+  active: true
+- name: Railways Africa
+  url: https://www.railwaysafrica.com/
+  rss_url: https://www.railwaysafrica.com/feed/
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  active: true
+- name: Daily Investor
+  url: https://dailyinvestor.com/
+  rss_url: https://dailyinvestor.com/feed/
+  type: rss
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - finance
+  - investment
+  - economics
+  active: true
+- name: TechLabari
+  url: https://techlabari.com/
+  rss_url: https://techlabari.com/feed/
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - tech
+  - startups
+  active: true
+- name: Tech Africa News
+  url: https://techafricanews.com/
+  rss_url: https://techafricanews.com/feed/
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - tech
+  - startups
+  - innovation
+  active: true
+- name: Business Insider Africa
+  url: https://africa.businessinsider.com/
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - business
+  - finance
+  - tech
+  css_selector: article h2 a, article h3 a
+  active: true
+  notes: JS-light — requests+BS4 sufficient
+- name: Further Africa
+  url: https://furtherafrica.com/
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - business
+  - investment
+  - development
+  css_selector: .post-title a, h2.entry-title a
+  active: true
+  notes: WordPress — try /feed/ route first before scraping
+- name: iafrica
+  url: https://iafrica.com/
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - general
+  - tech
+  - business
+  css_selector: h2 a, h3 a
+  active: true
+- name: Food Business MEA
+  url: https://www.foodbusinessmea.com/
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - agriculture
+  - food
+  - fmcg
+  css_selector: .article-title a, h2 a
+  active: true
+  notes: MEA focus — filter Africa articles in Layer 2
+- name: Energize
+  url: https://www.energize.co.za/
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: south-africa
+  countries:
+  - ZA
+  sectors:
+  - energy
+  - electrical
+  - engineering
+  css_selector: h2 a, h3 a, .entry-title a
+  active: true
+- name: Africa Energy Portal
+  url: https://africa-energy-portal.org/news
+  rss_url: null
+  type: scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - energy
+  - renewables
+  - policy
+  css_selector: .news-item a, h3 a
+  active: true
+  notes: IEA-backed — authoritative, high quality
+- name: Africa News
+  url: https://www.africanews.com/business
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: &id001 []
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: open
+  active: true
+- name: African Business
+  url: https://african.business
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: open
+  active: true
+- name: Bloomberg Africa
+  url: https://www.bloomberg.com/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: MoneyWeb
+  url: https://www.moneyweb.co.za/category/news/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: restricted
+  active: true
+  notes: ~4 free articles per month
+- name: Financial Afrik
+  url: https://www.financialafrik.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: Jeune Afrik
+  url: https://www.jeuneafrique.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: open
+  active: true
+- name: Forbes Africa Lusafona
+  url: https://forbesafricalusofona.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - business
+  - economics
+  - finance
+  language: en
+  paywall_status: open
+  active: true
+- name: AP News
+  url: https://apnews.com/hub/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: BBC News
+  url: https://www.bbc.com/news/world/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: Defence Web
+  url: https://www.defenceweb.co.za/category/african-news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: News 24
+  url: https://www.news24.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: IOL
+  url: https://www.iol.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: Mail & Guardian Africa
+  url: https://mg.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: Africa Report
+  url: https://www.theafricareport.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: TimesLive
+  url: https://www.timeslive.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: Africa Confidential
+  url: https://www.africa-confidential.com/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: Financial Times African Politics
+  url: https://www.ft.com/african-politics?form=MG0AV3
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: New African
+  url: https://newafricanmagazine.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: Polity
+  url: https://www.polity.org.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - politics
+  - security
+  - governance
+  language: en
+  paywall_status: open
+  active: true
+- name: Alternate Energy Africa
+  url: https://www.ae-africa.com/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: Food Business Africa
+  url: https://www.foodbusinessafrica.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: Mining Weekly
+  url: https://www.miningweekly.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: Oil Review Africa
+  url: https://oilreviewafrica.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: East African Mining News
+  url: https://eastafricanminingnews.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: The African Miner
+  url: https://miner.africa/category/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: Farmers Weekly
+  url: https://www.farmersweekly.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: African Agri Business
+  url: https://africanagribusiness.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - agriculture
+  - energy
+  - mining
+  - resources
+  language: en
+  paywall_status: open
+  active: true
+- name: Construct Africa
+  url: https://constructafrica.com/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: Construction Review
+  url: https://constructionreviewonline.com/region/news/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Freight Trends Global
+  url: https://freighttrendsglobal.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Global Africa Network
+  url: https://www.globalafricanetwork.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Railway Gazette International
+  url: https://www.railwaygazette.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Infrastructure News
+  url: https://infrastructurenews.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Engineering News
+  url: https://www.engineeringnews.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Logistics Update Africa
+  url: https://www.logupdateafrica.com/latest-news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Rail Market
+  url: https://railmarket.com/news/regions/af
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - infrastructure
+  - transport
+  - logistics
+  language: en
+  paywall_status: open
+  active: true
+- name: Connecting Africa
+  url: https://www.connectingafrica.com
+  rss_url: https://www.connectingafrica.com/rss.xml
+  type: rss+scraper
+  css_selector: 'a.VerticalCard-Title, a.ListPreview-Title'
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Disrupt Africa
+  url: https://disruptafrica.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: IT News Africa
+  url: https://www.itnewsafrica.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech Africa News
+  url: https://techafricanews.com/category/news/
+  rss_url: https://techafricanews.com/feed/
+  type: rss+scraper
+  css_selector: 'a.app-article[href*="/20"]'
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech Weez
+  url: https://techweez.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech Crunch
+  url: https://techcrunch.com/tag/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech Point Africa
+  url: https://techpoint.africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech in Africa
+  url: https://www.techinafrica.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: Tech Central
+  url: https://techcentral.co.za
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: We Are Tech
+  url: https://www.wearetech.africa
+  rss_url: https://www.wearetech.africa/feed/
+  type: rss+scraper
+  css_selector: 'a.aidanews2_k2_title[href*="/fils/"]'
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+- name: African  Pharmaceutical Review
+  url: https://africanpharmaceuticalreview.com/public/contents/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+  notes: Healthcare source
+- name: Gavi
+  url: https://www.gavi.org/news-resources/media-room/news-releases
+  rss_url: null
+  type: scraper
+  css_selector: 'div.feed__text a[href*="/news/media-room/"]'
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+  notes: Healthcare source
+- name: iAfrica
+  url: https://iafrica.com/category/ai-africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - tech
+  - telecoms
+  - innovation
+  language: en
+  paywall_status: open
+  active: true
+  notes: AI source
+- name: Africa Business Communities
+  url: https://africabusinesscommunities.com/index.html
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Afrik21
+  url: https://www.afrik21.africa/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: restricted
+  active: true
+  notes: Not available
+- name: Africa Intelligence
+  url: https://www.africaintelligence.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: paywalled
+  active: true
+  notes: Paywalled
+- name: Africa News
+  url: https://www.africanews.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Bizcommunity
+  url: https://www.bizcommunity.africa/AllIndustries#
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Egypt Today
+  url: https://www.egypttoday.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Engineering News
+  url: https://www.engineeringnews.co.za/page/home
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Ecofin Agency
+  url: https://www.ecofinagency.com/homepage
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Forbes Africa Lusophone
+  url: https://www.forbesafricalusofona.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Class FM Online
+  url: https://www.classfmonline.com/business/index.php
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Semafor
+  url: https://www.semafor.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: The East African
+  url: https://www.theeastafrican.co.ke
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: restricted
+  active: true
+  notes: Paywalled - certain articles are free
+- name: NTV Kenya
+  url: https://ntvkenya.co.ke
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Zawya
+  url: https://www.zawya.com/en/economy/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Le Monde
+  url: https://www.lemonde.fr/en/le-monde-africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: RFI
+  url: https://www.rfi.fr/en/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Africa Business Watch
+  url: https://www.africabusinesswatch.com/latest-news
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: VOA
+  url: https://www.voaportugues.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: France 24
+  url: https://www.france24.com/en/africa
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: Southern African Times
+  url: https://southernafricantimes.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: *id001
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: asemana
+  url: https://asemana.cv
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: anacao
+  url: https://www.anacao.cv
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: expressodasilhas
+  url: https://expressodasilhas.cv
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: corbeaunews-centrafrique
+  url: https://corbeaunews-centrafrique.org
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: ndjonisango
+  url: https://ndjonisango.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+country_specific_sources:
+- name: Businessday Nigeria
+  url: https://businessday.ng/
+  rss_url: https://businessday.ng/feed/
+  type: rss
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - NG
+  sectors:
+  - business
+  - finance
+  - economics
+  active: true
+- name: Nairametrics
+  url: https://nairametrics.com/
+  rss_url: https://nairametrics.com/feed/
+  type: rss
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - NG
+  sectors:
+  - finance
+  - investment
+  - economics
+  active: true
+- name: The Punch Nigeria
+  url: https://punchng.com/
+  rss_url: https://punchng.com/feed/
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - NG
+  sectors:
+  - politics
+  - general
+  - business
+  active: true
+- name: Business Daily Africa (Kenya)
+  url: https://www.businessdailyafrica.com/
+  rss_url: https://www.businessdailyafrica.com/rss
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - KE
+  sectors:
+  - business
+  - finance
+  - economics
+  active: true
+- name: The Star Kenya
+  url: https://www.the-star.co.ke/
+  rss_url: https://www.the-star.co.ke/rss
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - KE
+  sectors:
+  - politics
+  - general
+  - business
+  active: true
+- name: Graphic Business Ghana
+  url: https://www.graphic.com.gh/business/
+  rss_url: https://www.graphic.com.gh/feed/
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - GH
+  sectors:
+  - business
+  - finance
+  - economics
+  active: true
+- name: The Reporter Ethiopia
+  url: https://www.thereporterethiopia.com/
+  rss_url: https://www.thereporterethiopia.com/feed/
+  type: rss
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - ET
+  sectors:
+  - business
+  - politics
+  - general
+  active: true
+- name: The Citizen Tanzania
+  url: https://www.thecitizen.co.tz/
+  rss_url: https://www.thecitizen.co.tz/feed/
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - TZ
+  sectors:
+  - business
+  - politics
+  - general
+  active: true
+- name: aps
+  url: https://www.aps.dz/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries:
+  - DZ
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: verangola
+  url: https://www.verangola.net/va/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries: &id002
+  - AO
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: angop
+  url: https://www.angop.ao/en/#
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries: *id002
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: lanouvelletribune
+  url: https://lanouvelletribune.info
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id003
+  - BJ
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lematinal
+  url: https://lematinal.bj
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id003
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: leconomistebenin
+  url: https://leconomistebenin.bj
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id003
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: matinlibre
+  url: https://matinlibre.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id003
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: thepatriot
+  url: https://thepatriot.co.bw/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - BW
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: leconomistedufaso
+  url: https://leconomistedufaso.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id004
+  - BF
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/burkina-faso
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id004
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: burunditimes
+  url: https://www.burunditimes.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - BI
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: cameroononline
+  url: https://www.cameroononline.org
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: &id005
+  - CM
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: theguardianpostcameroon
+  url: https://theguardianpostcameroon.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id005
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: journaldutchad
+  url: https://journaldutchad.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: &id006
+  - TD
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/chad
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id006
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: alwatwan
+  url: https://alwatwan.net
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id007
+  - KM
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: comoresinfos
+  url: https://www.comoresinfos.net
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id007
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: actualite
+  url: https://actualite.cd/actualite
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: &id008
+  - CD
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: 7sur7
+  url: https://7sur7.cd
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id008
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: comorostimes
+  url: https://comorostimes.com/latest-news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id008
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: journaldebrazza
+  url: https://www.journaldebrazza.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: &id009
+  - CG
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lasemaineafricaine
+  url: https://lasemaineafricaine.info
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id009
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: adiac-congo
+  url: https://www.adiac-congo.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id009
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: connectionivoirienne
+  url: https://connectionivoirienne.net
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id010
+  - CI
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: fratmat
+  url: https://www.fratmat.info
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id010
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lintelligentdabidjan
+  url: https://www.lintelligentdabidjan.info/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id010
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: adi
+  url: https://www.adi.dj
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id011
+  - DJ
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: djibouticitytimes
+  url: https://djibouticitytimes.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id011
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: egyptindependent
+  url: https://www.egyptindependent.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: &id012
+  - EG
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: dailynewsegypt
+  url: https://www.dailynewsegypt.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id012
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: ahoraeg
+  url: https://ahoraeg.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries:
+  - GQ
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: eriinfo
+  url: https://eriinfo.com/category/eritrean-news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - ER
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: swazilandnews
+  url: https://www.swazilandnews.co.za/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - SZ
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: addisstandard
+  url: https://addisstandard.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id013
+  - ET
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: ena
+  url: https://www.ena.et/web/eng
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id013
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: gabonactu
+  url: https://gabonactu.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: &id014
+  - GA
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/gabon
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries: *id014
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: standard
+  url: https://standard.gm
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - GM
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: ghanaiantimes
+  url: https://ghanaiantimes.com.gh
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - GH
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: guineenews
+  url: https://guineenews.org/category/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - GN
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/guinea-bissau
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - GW
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: nation
+  url: https://nation.africa/kenya
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id015
+  - KE
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: tuko
+  url: https://www.tuko.co.ke/politics
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id015
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: lestimes
+  url: https://lestimes.com/category/news
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - LS
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: frontpageafricaonline
+  url: https://frontpageafricaonline.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id016
+  - LR
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: thenewdawnliberia
+  url: https://thenewdawnliberia.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id016
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: libyaobserver
+  url: https://libyaobserver.ly
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: &id017
+  - LY
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: libyaherald
+  url: https://libyaherald.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id017
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: madagascar-tribune
+  url: https://www.madagascar-tribune.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id018
+  - MG
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lexpress
+  url: https://www.lexpress.mg
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id018
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: maravipost
+  url: https://www.maravipost.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - MW
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: maliweb
+  url: https://www.maliweb.net
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id019
+  - ML
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/mali
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id019
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: saharamedias
+  url: https://fr.saharamedias.net
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - MR
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: govmu
+  url: https://govmu.org/EN/Pages/ViewAllNews.aspx
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: &id020
+  - MU
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lexpress mu
+  url: https://lexpress.mu
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries: *id020
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/morocco
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries:
+  - MA
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: 360mozambique
+  url: https://360mozambique.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries: &id021
+  - MZ
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: aimnews
+  url: https://aimnews.org/category/english
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries: *id021
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: clubofmozambique
+  url: https://clubofmozambique.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries: *id021
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: namibian
+  url: https://www.namibian.com.na/category/news/politics
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - NA
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: actuniger
+  url: https://actuniger.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - NE
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: dailypost
+  url: https://dailypost.ng
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - NG
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: newtimes
+  url: https://www.newtimes.co.rw
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - RW
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: telanon
+  url: https://www.telanon.info
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: central-africa
+  countries:
+  - ST
+  sectors:
+  - all
+  language: pt
+  paywall_status: open
+  active: true
+- name: seneweb
+  url: https://www.seneweb.com/fr/news/senegal
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - SN
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: nation
+  url: https://www.nation.sc
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - SC
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: thesierraleonetelegraph
+  url: https://www.thesierraleonetelegraph.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries:
+  - SL
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: thesomalidigest
+  url: https://thesomalidigest.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - SO
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: sabcnews
+  url: https://www.sabcnews.com/sabcnews
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: southsudannewsagency
+  url: https://southsudannewsagency.net/south-sudan
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - SS
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: sudantribune
+  url: https://sudantribune.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: &id022
+  - SD
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: suna-sd
+  url: https://suna-sd.net/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id022
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: dabangasudan
+  url: https://www.dabangasudan.org/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id022
+  sectors:
+  - all
+  language: ar
+  paywall_status: open
+  active: true
+- name: dailynews
+  url: https://dailynews.co.tz
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - TZ
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: togofirst
+  url: https://www.togofirst.com/en
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: &id023
+  - TG
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: republicoftogo
+  url: https://www.republicoftogo.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: west-africa
+  countries: *id023
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: news-tunisia
+  url: https://news-tunisia.tunisienumerique.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: &id024
+  - TN
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: lapresse
+  url: https://lapresse.tn
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id024
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: france24
+  url: https://www.france24.com/en/tag/tunisia
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: north-africa
+  countries: *id024
+  sectors:
+  - all
+  language: fr
+  paywall_status: open
+  active: true
+- name: independent
+  url: https://www.independent.co.ug/the-news-today
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: east-africa
+  countries:
+  - UG
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: lusakatimes
+  url: https://www.lusakatimes.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - ZM
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
+- name: newzimbabwe
+  url: https://www.newzimbabwe.com
+  rss_url: null
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - ZW
+  sectors:
+  - all
+  language: en
+  paywall_status: open
+  active: true
