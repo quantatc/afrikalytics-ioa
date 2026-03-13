@@ -9,6 +9,7 @@ Import templates:
 
 - `orchestration/n8n_workflow_cloud_trial.json`
 - `orchestration/n8n_workflow_self_hosted.json`
+- `orchestration/n8n_workflow_layer3_brief_agent.json`
 
 ---
 
@@ -129,3 +130,62 @@ Post these fields to Slack from Layer 3 response/log:
 - top 3 themes
 - `slack_digest`
 - local/Drive report link
+
+---
+
+## 3) Layer 3 Brief Agent in n8n (on-demand + scheduled)
+
+Use this if you want Slack users to request custom briefs by filters (country, sector, region, theme, timeframe) with article links.
+
+Import:
+
+- `orchestration/n8n_workflow_layer3_brief_agent.json`
+
+### A. Configure `Init Config` node
+
+Set:
+
+- `supabase_url` (your project URL)
+- `supabase_service_key` (service role key)
+- `openai_api_key`
+- `slack_webhook_url`
+- defaults for `country`, `sector`, `region`, `days`, etc.
+
+### B. Trigger modes
+
+The workflow supports three entry points:
+
+1. **Manual Trigger** for testing.
+2. **Schedule Trigger** for daily auto briefs.
+3. **Webhook Trigger** for user-driven requests from Slack.
+
+### C. Slack slash-command format (recommended)
+
+Create a Slack slash command (for example `/ioa-brief`) and point it to the workflow webhook URL.
+
+Command text format:
+
+```text
+country=NG sector=Tech region=west-africa theme=payments days=14 max_articles=100 min_relevance=3 audience=investors
+```
+
+Supported keys:
+
+- `country`: ISO2 code (e.g. `NG`, `ZA`, `KE`) or `ALL`
+- `sector`: `Energy|Mining|Tech|Finance|Policy|Agriculture|Infrastructure|Other|ALL`
+- `region`: `north-africa|west-africa|east-africa|central-africa|southern-africa|pan-africa|all`
+- `theme`: free text keyword(s)
+- `days`: 1-30
+- `max_articles`: 20-250
+- `min_relevance`: 1-5
+- `audience`: free text
+
+### D. Output
+
+The Slack message includes:
+
+- filter summary
+- concise digest
+- top referenced article links
+
+The full structured brief JSON is kept in n8n execution data (`brief_json`) for downstream storage/report rendering.
