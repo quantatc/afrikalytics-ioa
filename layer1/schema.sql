@@ -1,15 +1,16 @@
 -- IOA Intelligence Briefing — Supabase Schema
 -- Run once in Supabase SQL editor to set up Layer 1 storage
 -- Enable pgvector extension first: Extensions → pgvector → Enable
+CREATE EXTENSION IF NOT EXISTS vector;
 
 -- ── Layer 1: Raw Articles ─────────────────────────────────────────────────
 CREATE TABLE IF NOT EXISTS raw_articles (
-    id                INTEGER PRIMARY KEY AUTOINCREMENT,
+    id                BIGSERIAL PRIMARY KEY,
     url_hash          TEXT    UNIQUE NOT NULL,   -- SHA256[:16] of URL for dedup
     url               TEXT    NOT NULL,
     source_name       TEXT    NOT NULL,
     source_tier       TEXT    NOT NULL DEFAULT 'pan-africa',
-    hard_country_tags TEXT,                      -- JSON list e.g. '["NG"]', null for Tier 1
+    hard_country_tags JSONB,                     -- e.g. ["NG"], null for Tier 1
     language          TEXT    NOT NULL DEFAULT 'en',  -- ISO 639-1: en|fr|pt|ar — Layer 2 translation routing
     paywall_status    TEXT    NOT NULL DEFAULT 'open', -- open|restricted|paywalled — logged on block
     headline          TEXT,
@@ -50,6 +51,10 @@ CREATE INDEX IF NOT EXISTS idx_enriched_country_sector
 -- Index for relevance filtering
 CREATE INDEX IF NOT EXISTS idx_enriched_relevance
     ON enriched_articles (relevance_score DESC);
+
+-- Prevent duplicate enrich rows per raw article
+CREATE UNIQUE INDEX IF NOT EXISTS idx_enriched_raw_id_unique
+    ON enriched_articles (raw_id);
 
 -- pgvector index for RAG similarity search
 CREATE INDEX IF NOT EXISTS idx_enriched_embedding

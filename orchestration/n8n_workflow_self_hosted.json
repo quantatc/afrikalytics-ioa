@@ -1,0 +1,190 @@
+{
+  "name": "IOA Pipeline - Self Hosted n8n (Direct Commands)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual_trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -880,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule_trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -880,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /path/to/afrikalytics-ioa && uv run python layer1/collect.py --mode prod"
+      },
+      "id": "run_layer1",
+      "name": "Run Layer 1",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -660,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /path/to/afrikalytics-ioa && uv run python layer2/enrich.py --mode prod --batch-size 100 --drain"
+      },
+      "id": "run_layer2",
+      "name": "Run Layer 2",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -440,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "command": "cd /path/to/afrikalytics-ioa && uv run python layer3/synthesise.py --mode prod --period-days 7 --max-articles 120 --min-relevance 3"
+      },
+      "id": "run_layer3",
+      "name": "Run Layer 3",
+      "type": "n8n-nodes-base.executeCommand",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "text",
+              "value": "={{ \"✅ IOA self-hosted pipeline complete.\\nUTC: \" + $now.toISO() }}"
+            },
+            {
+              "name": "slack_webhook_url",
+              "value": "https://hooks.slack.com/services/REPLACE/ME"
+            }
+          ]
+        }
+      },
+      "id": "success_message",
+      "name": "Success Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        0,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.slack_webhook_url}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"text\": $json.text } }}"
+      },
+      "id": "slack_notify",
+      "name": "Slack Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        220,
+        200
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 1": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 2",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 2": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 3",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 3": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Message": {
+      "main": [
+        [
+          {
+            "node": "Slack Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}

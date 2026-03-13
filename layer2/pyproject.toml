@@ -1,0 +1,29 @@
+[project]
+name = "ioa-layer2"
+version = "0.1.0"
+description = "IOA Intelligence Briefing — Layer 2: OpenAI enrichment"
+requires-python = ">=3.11"
+dependencies = [
+    "openai>=1.99.0",
+    "supabase>=2.10.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.0.0",
+    "ruff>=0.4.0",
+]
+
+[tool.setuptools]
+py-modules = []
+
+# How to use:
+# cd layer2
+# uv sync
+# uv run python enrich.py --mode dev

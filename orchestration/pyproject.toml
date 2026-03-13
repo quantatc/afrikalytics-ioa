@@ -1,0 +1,15 @@
+[project]
+name = "ioa-orchestration"
+version = "0.1.0"
+description = "IOA n8n webhook runner bridge"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.0",
+    "uvicorn>=0.30.0",
+]
+
+[tool.setuptools]
+py-modules = []
+
+# How to use:
+# uv run uvicorn orchestration.runner_api:app --host 0.0.0.0 --port 8000

@@ -1,0 +1,509 @@
+{
+  "name": "IOA Pipeline - Cloud Trial (Webhook Runner)",
+  "nodes": [
+    {
+      "parameters": {},
+      "id": "manual_trigger",
+      "name": "Manual Trigger",
+      "type": "n8n-nodes-base.manualTrigger",
+      "typeVersion": 1,
+      "position": [
+        -1260,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "hours",
+              "hoursInterval": 6
+            }
+          ]
+        }
+      },
+      "id": "schedule_trigger",
+      "name": "Schedule Trigger",
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.2,
+      "position": [
+        -1260,
+        300
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "base_url",
+              "value": "https://REPLACE_WITH_TUNNEL_URL"
+            },
+            {
+              "name": "run_token",
+              "value": "REPLACE_WITH_ORCH_RUN_TOKEN"
+            },
+            {
+              "name": "mode",
+              "value": "prod"
+            },
+            {
+              "name": "slack_webhook_url",
+              "value": "https://hooks.slack.com/services/REPLACE/ME"
+            }
+          ],
+          "number": [
+            {
+              "name": "l2_batch_size",
+              "value": 100
+            },
+            {
+              "name": "l3_period_days",
+              "value": 7
+            },
+            {
+              "name": "l3_max_articles",
+              "value": 120
+            },
+            {
+              "name": "l3_min_relevance",
+              "value": 3
+            }
+          ],
+          "boolean": [
+            {
+              "name": "l2_drain",
+              "value": true
+            }
+          ]
+        }
+      },
+      "id": "init_config",
+      "name": "Init Config",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -1040,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$json.base_url + '/run'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Run-Token",
+              "value": "={{$json.run_token}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"job\": \"layer1\", \"mode\": $json.mode } }}",
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "run_layer1",
+      "name": "Run Layer 1",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -820,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}"
+            }
+          ]
+        }
+      },
+      "id": "if_layer1_ok",
+      "name": "If Layer 1 OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -620,
+        200
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"Init Config\"].json.base_url + '/run'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Run-Token",
+              "value": "={{$node[\"Init Config\"].json.run_token}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"job\": \"layer2\", \"mode\": $node[\"Init Config\"].json.mode, \"batch_size\": $node[\"Init Config\"].json.l2_batch_size, \"drain\": $node[\"Init Config\"].json.l2_drain } }}",
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "run_layer2",
+      "name": "Run Layer 2",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -420,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}"
+            }
+          ]
+        }
+      },
+      "id": "if_layer2_ok",
+      "name": "If Layer 2 OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        -220,
+        120
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"Init Config\"].json.base_url + '/run'}}",
+        "sendHeaders": true,
+        "headerParameters": {
+          "parameters": [
+            {
+              "name": "X-Run-Token",
+              "value": "={{$node[\"Init Config\"].json.run_token}}"
+            }
+          ]
+        },
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"job\": \"layer3\", \"mode\": $node[\"Init Config\"].json.mode, \"period_days\": $node[\"Init Config\"].json.l3_period_days, \"max_articles\": $node[\"Init Config\"].json.l3_max_articles, \"min_relevance\": $node[\"Init Config\"].json.l3_min_relevance } }}",
+        "options": {
+          "timeout": 3600000
+        }
+      },
+      "id": "run_layer3",
+      "name": "Run Layer 3",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        -20,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "boolean": [
+            {
+              "value1": "={{$json.ok}}"
+            }
+          ]
+        }
+      },
+      "id": "if_layer3_ok",
+      "name": "If Layer 3 OK",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 1,
+      "position": [
+        180,
+        40
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "text",
+              "value": "={{ \"✅ IOA pipeline complete. Layer1/2/3 all succeeded.\\nUTC: \" + $now.toISO() }}"
+            }
+          ]
+        }
+      },
+      "id": "success_message",
+      "name": "Success Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        380,
+        -40
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "text",
+              "value": "={{ \"❌ IOA pipeline failed at Layer 1.\\nReturn code: \" + ($json.returncode || \"n/a\") + \"\\n\" + ($json.stderr_tail || \"\") }}"
+            }
+          ]
+        }
+      },
+      "id": "fail_l1_message",
+      "name": "Fail L1 Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -420,
+        320
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "text",
+              "value": "={{ \"❌ IOA pipeline failed at Layer 2.\\nReturn code: \" + ($json.returncode || \"n/a\") + \"\\n\" + ($json.stderr_tail || \"\") }}"
+            }
+          ]
+        }
+      },
+      "id": "fail_l2_message",
+      "name": "Fail L2 Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        -20,
+        280
+      ]
+    },
+    {
+      "parameters": {
+        "keepOnlySet": true,
+        "values": {
+          "string": [
+            {
+              "name": "text",
+              "value": "={{ \"❌ IOA pipeline failed at Layer 3.\\nReturn code: \" + ($json.returncode || \"n/a\") + \"\\n\" + ($json.stderr_tail || \"\") }}"
+            }
+          ]
+        }
+      },
+      "id": "fail_l3_message",
+      "name": "Fail L3 Message",
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 2,
+      "position": [
+        380,
+        220
+      ]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "={{$node[\"Init Config\"].json.slack_webhook_url}}",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ { \"text\": $json.text } }}"
+      },
+      "id": "slack_notify",
+      "name": "Slack Notify",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [
+        620,
+        120
+      ]
+    }
+  ],
+  "connections": {
+    "Manual Trigger": {
+      "main": [
+        [
+          {
+            "node": "Init Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "Init Config",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Init Config": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 1",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 1": {
+      "main": [
+        [
+          {
+            "node": "If Layer 1 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Layer 1 OK": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 2",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail L1 Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 2": {
+      "main": [
+        [
+          {
+            "node": "If Layer 2 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Layer 2 OK": {
+      "main": [
+        [
+          {
+            "node": "Run Layer 3",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail L2 Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Run Layer 3": {
+      "main": [
+        [
+          {
+            "node": "If Layer 3 OK",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "If Layer 3 OK": {
+      "main": [
+        [
+          {
+            "node": "Success Message",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Fail L3 Message",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Success Message": {
+      "main": [
+        [
+          {
+            "node": "Slack Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail L1 Message": {
+      "main": [
+        [
+          {
+            "node": "Slack Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail L2 Message": {
+      "main": [
+        [
+          {
+            "node": "Slack Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Fail L3 Message": {
+      "main": [
+        [
+          {
+            "node": "Slack Notify",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "pinData": {}
+}
