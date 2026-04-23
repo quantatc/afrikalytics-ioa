@@ -76,8 +76,8 @@ sources:
   countries: []
   sectors:
   - all
-  active: true
-  notes: Major wire service — high syndication risk, dedup aggressively
+  active: false
+  notes: RSS feed discontinued by Reuters. Scraper returns 401. Disabled.
 - name: GDELT Africa (2 Weeks)
   url: https://api.gdeltproject.org/api/v2/doc/doc
   rss_url: null
@@ -92,14 +92,10 @@ sources:
   active: true
   gdelt_lookback_days: 14
   gdelt_max_records: 250
-  gdelt_max_query_len: 900
   gdelt_min_interval_seconds: 5
   gdelt_max_retries: 3
-  gdelt_split_attempts: 4
-  gdelt_min_query_len_floor: 250
-  gdelt_use_csv_sectors: true
-  gdelt_all_african_countries: true
-  notes: GDELT Doc API using all CSV themes and all 54 African countries.
+  gdelt_query: '"Africa" OR "African"'
+  notes: Simple explicit query — avoids GDELT 200-char limit on complex boolean queries.
 - name: Al Jazeera Africa
   url: https://www.aljazeera.com/africa/
   rss_url: https://www.aljazeera.com/xml/rss/all.xml
