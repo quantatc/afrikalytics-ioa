@@ -1,0 +1,92 @@
+version: "2026-04-22-mvp"
+
+regions:
+  pan-africa:
+    countries: ["PAN"]
+  north-africa:
+    countries: ["DZ", "EG", "LY", "MA", "SD", "TN"]
+  west-africa:
+    countries: ["BJ", "BF", "CV", "CI", "GM", "GH", "GN", "GW", "LR", "ML", "MR", "NE", "NG", "SN", "SL", "TG"]
+  east-africa:
+    countries: ["BI", "KM", "DJ", "ER", "ET", "KE", "MG", "MW", "MU", "MZ", "RW", "SC", "SO", "SS", "TZ", "UG", "ZM", "ZW"]
+  central-africa:
+    countries: ["AO", "CM", "CF", "TD", "CG", "CD", "GQ", "GA", "ST"]
+  southern-africa:
+    countries: ["BW", "LS", "NA", "ZA", "SZ"]
+
+sectors:
+  Financials:
+    children: ["Banking", "Insurance", "Asset Management", "Fintech"]
+  Energy:
+    children: ["Oil", "Gas", "Renewables", "Power", "Transmission and Grid"]
+  Mining and Metals:
+    children: ["Mining", "Metals", "Critical Minerals", "Beneficiation"]
+  Agriculture:
+    children: ["Agribusiness", "Food Security", "Farming", "Inputs"]
+  Manufacturing and Industrial:
+    children: ["Manufacturing", "Industrial Policy", "Automotive", "Chemicals"]
+  Infrastructure:
+    children: ["Transport", "Water", "Logistics", "Ports", "Rail", "Roads"]
+  Technology:
+    children: ["AI", "Telecoms", "Digital Infrastructure", "Cybersecurity", "Startups"]
+  Real Estate and Property:
+    children: ["Commercial Property", "Residential Property", "Construction"]
+  Healthcare and Pharma:
+    children: ["Healthcare", "Pharmaceuticals", "Medical Devices"]
+  Consumer and Retail:
+    children: ["Consumer Goods", "Retail", "E-commerce", "Media"]
+  Other:
+    children: []
+
+themes:
+  - Regulation and Policy
+  - Investment and Capital Flows
+  - M&A and Corporate Activity
+  - Macroeconomics
+  - Governance and Political Risk
+  - Infrastructure Development
+  - ESG and Sustainability
+  - Climate and Energy Transition
+  - Innovation and Technology Adoption
+  - Trade and Trade Agreements
+  - Labour and Employment
+  - Supply Chains
+
+event_types:
+  - Announcement
+  - Policy Change
+  - Regulation Introduced
+  - Investment Announced
+  - Project Launch
+  - Project Delay or Cancellation
+  - Financial Results
+  - Partnership or Joint Venture
+  - Acquisition or Merger
+  - Leadership Change
+  - Crisis or Disruption
+  - Legal Action or Litigation
+
+entity_types:
+  - Company
+  - Government Body
+  - Multilateral Institution
+  - Key Individual
+
+sentiment:
+  - Positive
+  - Negative
+  - Neutral
+  - Mixed
+
+time_horizon:
+  - Short-term
+  - Medium-term
+  - Long-term
+  - Unclear
+
+limits:
+  countries: 5
+  sectors: 4
+  themes: 5
+  event_types: 3
+  entities: 10

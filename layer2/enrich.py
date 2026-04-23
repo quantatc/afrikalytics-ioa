@@ -1,70 +1,52 @@
 """
-IOA Intelligence Briefing — Layer 2: Enrichment
-===============================================
-Fetches unprocessed raw articles, enriches them with OpenAI, stores structured
-outputs in enriched_articles, and marks raw_articles.processed_at.
+In(Sights) Tracker Layer 2: enrichment and taxonomy tagging.
 
-Usage (from repo root):
-    uv run python layer2/enrich.py
-    uv run python layer2/enrich.py --batch-size 100
-    uv run python layer2/enrich.py --mode prod
+Fetches unprocessed raw articles, asks OpenAI for structured tags against
+config/taxonomy.yaml, stores the result in enriched_articles, and marks each
+raw article as processed.
+
+Usage:
+    uv run python layer2/enrich.py --mode dev --batch-size 50
+    uv run python layer2/enrich.py --mode prod --batch-size 100 --drain
 """
+
+# ruff: noqa: E402
 
 # /// script
 # requires-python = ">=3.11"
 # dependencies = [
 #   "openai>=1.99.0",
-#   "supabase>=2.10.0",
+#   "psycopg[binary]>=3.2.0",
+#   "pyyaml>=6.0.2",
 # ]
 # ///
+
+from __future__ import annotations
 
 import argparse
 import json
 import logging
 import os
-import sqlite3
+import sys
 import time
-from datetime import datetime, timezone
+from datetime import datetime
 from pathlib import Path
+from typing import Any
 
 from openai import BadRequestError, OpenAI
-from countries import country_display_name, normalize_country_code
 
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
 
-def load_repo_env() -> None:
-    """
-    Lightweight .env loader (no external dependency).
-    Loads variables from repo-root .env if present, without overriding existing
-    process environment variables.
-    """
-    env_path = Path(__file__).resolve().parents[1] / ".env"
-    if not env_path.exists():
-        return
-
-    for raw_line in env_path.read_text(encoding="utf-8").splitlines():
-        line = raw_line.strip()
-        if not line or line.startswith("#"):
-            continue
-        if line.lower().startswith("export "):
-            line = line[7:].strip()
-        if "=" not in line:
-            continue
-
-        key, value = line.split("=", 1)
-        key = key.strip()
-        value = value.strip()
-        if not key:
-            continue
-        if value and value[0] == value[-1] and value[0] in ("'", '"'):
-            value = value[1:-1]
-        os.environ.setdefault(key, value)
+from ioa_core.db import connect_db, json_for_db, json_loads, now_utc_iso, vector_for_db
+from ioa_core.env import load_repo_env
+from ioa_core.taxonomy import load_taxonomy, normalize_enrichment_output, taxonomy_prompt
 
 
 load_repo_env()
 
-
-# Logging
-LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s — %(message)s"
+LOG_FORMAT = "%(asctime)s [%(levelname)s] %(name)s - %(message)s"
 LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(exist_ok=True)
 
@@ -82,78 +64,18 @@ logging.basicConfig(
 log = logging.getLogger("ioa.enrich")
 
 
-# Defaults (cheap + high quality for this workload)
 DEFAULT_MODEL = os.getenv("LAYER2_MODEL", "gpt-4o-mini")
 DEFAULT_EMBEDDING_MODEL = os.getenv("LAYER2_EMBEDDING_MODEL", "text-embedding-3-small")
 DEFAULT_EMBEDDING_DIMS = int(os.getenv("LAYER2_EMBEDDING_DIMS", "384"))
 DEFAULT_BATCH_SIZE = int(os.getenv("LAYER2_BATCH_SIZE", "50"))
 
-SECTORS = {
-    "Energy",
-    "Mining",
-    "Tech",
-    "Finance",
-    "Policy",
-    "Agriculture",
-    "Infrastructure",
-    "Other",
-}
 
-
-def now_utc_iso() -> str:
-    return datetime.now(timezone.utc).isoformat()
-
-
-def get_db(mode: str = "dev"):
-    """Return SQLite connection (dev) or Supabase client (prod)."""
-    if mode == "prod":
-        from supabase import create_client
-
-        url = os.environ["SUPABASE_URL"]
-        key = os.environ["SUPABASE_KEY"]
-        return create_client(url, key), "supabase"
-
-    # Always point to layer1 local DB to avoid CWD surprises.
-    db_path = Path(__file__).resolve().parents[1] / "layer1" / "ioa_dev.db"
-    conn = sqlite3.connect(str(db_path))
-    conn.row_factory = sqlite3.Row
-
-    conn.execute(
-        """
-        CREATE TABLE IF NOT EXISTS enriched_articles (
-            id               INTEGER PRIMARY KEY AUTOINCREMENT,
-            raw_id           INTEGER UNIQUE,
-            country          TEXT,
-            sector           TEXT,
-            relevance_score  INTEGER,
-            relevance_reason TEXT,
-            summary          TEXT,
-            embedding        TEXT,
-            enriched_at      TEXT NOT NULL
-        )
-        """
-    )
-    conn.commit()
-    return conn, "sqlite"
-
-
-def parse_hard_country_tags(value):
-    """Normalize hard country tags from JSON/text/list to list[str]."""
-    if value is None:
-        return []
-    if isinstance(value, list):
-        return [str(v).strip() for v in value if str(v).strip()]
-    if isinstance(value, str):
-        raw = value.strip()
-        if not raw:
-            return []
-        try:
-            parsed = json.loads(raw)
-            if isinstance(parsed, list):
-                return [str(v).strip() for v in parsed if str(v).strip()]
-        except json.JSONDecodeError:
-            pass
-        return [p.strip() for p in raw.split(",") if p.strip()]
+def parse_hard_country_tags(value: Any) -> list[str]:
+    parsed = json_loads(value)
+    if isinstance(parsed, list):
+        return [str(v).strip().upper() for v in parsed if str(v).strip()]
+    if isinstance(value, str) and value.strip():
+        return [p.strip().upper() for p in value.split(",") if p.strip()]
     return []
 
 
@@ -163,7 +85,7 @@ def fetch_unprocessed(db, db_type: str, batch_size: int) -> list[dict]:
             """
             SELECT
                 id, url_hash, url, source_name, source_tier, hard_country_tags,
-                headline, lede, published_at, scraped_at
+                language, headline, lede, published_at, scraped_at
             FROM raw_articles
             WHERE processed_at IS NULL
             ORDER BY scraped_at ASC
@@ -173,55 +95,22 @@ def fetch_unprocessed(db, db_type: str, batch_size: int) -> list[dict]:
         ).fetchall()
         return [dict(r) for r in rows]
 
-    result = (
-        db.table("raw_articles")
-        .select(
-            "id,url_hash,url,source_name,source_tier,hard_country_tags,"
-            "headline,lede,published_at,scraped_at"
-        )
-        .is_("processed_at", "null")
-        .order("scraped_at", desc=False)
-        .limit(batch_size)
-        .execute()
-    )
-    return result.data or []
+    rows = db.execute(
+        """
+        SELECT
+            id, url_hash, url, source_name, source_tier, hard_country_tags,
+            language, headline, lede, published_at, scraped_at
+        FROM raw_articles
+        WHERE processed_at IS NULL
+        ORDER BY scraped_at ASC
+        LIMIT %s
+        """,
+        (batch_size,),
+    ).fetchall()
+    return [dict(r) for r in rows]
 
 
-def call_openai_enrichment(client: OpenAI, model: str, article: dict, country_hint: str | None):
-    system = (
-        "You are an Africa-focused intelligence analyst. "
-        "Classify each article for executive briefing use.\n"
-        "Return ONLY valid JSON with keys: country, sector, relevance_score, relevance_reason, summary.\n"
-        "country: only African ISO-2 country code (e.g. NG, ZA, AO) or PAN for pan-African coverage. "
-        "Never output non-African country codes.\n"
-        "sector: one of Energy, Mining, Tech, Finance, Policy, Agriculture, Infrastructure, Other.\n"
-        "relevance_score: integer 1-5 where 5 is highly decision-relevant for investors/policy executives.\n"
-        "relevance_reason: one concise sentence.\n"
-        "summary: exactly 3 sentences in plain business English."
-    )
-
-    payload = {
-        "source_name": article.get("source_name"),
-        "source_tier": article.get("source_tier"),
-        "country_hint": country_hint,
-        "headline": (article.get("headline") or "")[:300],
-        "lede": (article.get("lede") or "")[:1600],
-        "url": article.get("url"),
-    }
-
-    request_payload = {
-        "model": model,
-        "response_format": {"type": "json_object"},
-        "messages": [
-            {"role": "system", "content": system},
-            {"role": "user", "content": json.dumps(payload, ensure_ascii=True)},
-        ],
-    }
-
-    # Some OpenAI models only allow default temperature=1 and reject explicit values.
-    if not model.lower().startswith("gpt-5"):
-        request_payload["temperature"] = 0.2
-
+def _chat_json(client: OpenAI, request_payload: dict) -> dict:
     try:
         resp = client.chat.completions.create(**request_payload)
     except BadRequestError as e:
@@ -232,47 +121,55 @@ def call_openai_enrichment(client: OpenAI, model: str, article: dict, country_hi
             raise
 
     raw = (resp.choices[0].message.content or "").strip()
-    data = json.loads(raw)
+    return json.loads(raw)
 
-    raw_country = str(data.get("country", "")).strip()
-    country, country_reason = normalize_country_code(raw_country, country_hint=country_hint)
-    if raw_country and raw_country.strip().upper() != country:
-        log.warning(
-            "Country normalized: raw='%s' -> '%s' (%s) for source=%s url=%s",
-            raw_country,
-            country,
-            country_reason,
-            article.get("source_name"),
-            article.get("url"),
-        )
 
-    sector = str(data.get("sector", "Other")).strip().title()
-    if sector not in SECTORS:
-        sector = "Other"
+def call_openai_enrichment(
+    client: OpenAI,
+    model: str,
+    article: dict,
+    country_hint: str | None,
+    taxonomy: dict,
+) -> dict:
+    system = (
+        "You are an Africa-focused intelligence analyst tagging articles for a research database.\n"
+        "Return ONLY valid JSON. Use only the provided taxonomy values.\n"
+        "Required keys: primary_country, countries, primary_sector, sector_tags, themes, "
+        "event_types, entities, sentiment, time_horizon, relevance_score, relevance_reason, summary.\n"
+        "primary_country: African ISO-2 code or PAN. countries: list of African ISO-2 codes or PAN.\n"
+        "entities: list of objects with keys name and type.\n"
+        "summary: exactly 3 concise business-English sentences.\n"
+        "relevance_score: integer 1-5 for IOA executive decision relevance.\n"
+        "Do not output section 7 advanced layers: risk_categories, strategic_signals, or project_stage."
+    )
 
-    relevance_score = data.get("relevance_score", 3)
-    try:
-        relevance_score = int(relevance_score)
-    except (TypeError, ValueError):
-        relevance_score = 3
-    relevance_score = max(1, min(5, relevance_score))
-
-    relevance_reason = str(data.get("relevance_reason", "")).strip()[:400]
-    summary = str(data.get("summary", "")).strip()[:1600]
-
-    if not summary:
-        summary = "No summary provided."
-    if not relevance_reason:
-        relevance_reason = "Model returned no reason."
-
-    return {
-        "country": country,
-        "country_name": country_display_name(country),
-        "sector": sector,
-        "relevance_score": relevance_score,
-        "relevance_reason": relevance_reason,
-        "summary": summary,
+    payload = {
+        "taxonomy": json.loads(taxonomy_prompt(taxonomy)),
+        "article": {
+            "source_name": article.get("source_name"),
+            "source_tier": article.get("source_tier"),
+            "country_hint": country_hint,
+            "language": article.get("language"),
+            "headline": (article.get("headline") or "")[:300],
+            "lede": (article.get("lede") or "")[:1800],
+            "url": article.get("url"),
+            "published_at": str(article.get("published_at") or ""),
+        },
     }
+
+    request_payload = {
+        "model": model,
+        "response_format": {"type": "json_object"},
+        "messages": [
+            {"role": "system", "content": system},
+            {"role": "user", "content": json.dumps(payload, ensure_ascii=True)},
+        ],
+    }
+    if not model.lower().startswith("gpt-5"):
+        request_payload["temperature"] = 0.2
+
+    raw_data = _chat_json(client, request_payload)
+    return normalize_enrichment_output(raw_data, country_hint=country_hint, taxonomy=taxonomy)
 
 
 def make_embedding(
@@ -281,7 +178,6 @@ def make_embedding(
     embedding_dims: int,
     text: str,
 ) -> list[float]:
-    # Keep payload small to reduce embedding cost.
     compact = text[:3000]
     try:
         emb = client.embeddings.create(
@@ -301,9 +197,6 @@ def make_embedding(
 
 
 def write_enriched_and_mark_processed(db, db_type: str, raw_id: int, record: dict) -> str:
-    """
-    Returns status: inserted | exists.
-    """
     processed_at = now_utc_iso()
 
     if db_type == "sqlite":
@@ -312,62 +205,87 @@ def write_enriched_and_mark_processed(db, db_type: str, raw_id: int, record: dic
             (raw_id,),
         ).fetchone()
         if existing:
-            db.execute(
-                "UPDATE raw_articles SET processed_at = ? WHERE id = ?",
-                (processed_at, raw_id),
-            )
+            db.execute("UPDATE raw_articles SET processed_at = ? WHERE id = ?", (processed_at, raw_id))
             db.commit()
             return "exists"
 
         db.execute(
             """
             INSERT INTO enriched_articles
-                (raw_id, country, sector, relevance_score, relevance_reason, summary, embedding, enriched_at)
+                (raw_id, taxonomy_version, primary_country, countries, regions,
+                 primary_sector, sector_tags, themes, event_types, entities,
+                 sentiment, time_horizon, relevance_score, relevance_reason, summary,
+                 embedding, tag_status, enriched_at, country, sector)
             VALUES
-                (?, ?, ?, ?, ?, ?, ?, ?)
+                (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'ai_generated', ?, ?, ?)
             """,
             (
                 raw_id,
-                record["country"],
-                record["sector"],
+                record["taxonomy_version"],
+                record["primary_country"],
+                json.dumps(record["countries"], ensure_ascii=True),
+                json.dumps(record["regions"], ensure_ascii=True),
+                record["primary_sector"],
+                json.dumps(record["sector_tags"], ensure_ascii=True),
+                json.dumps(record["themes"], ensure_ascii=True),
+                json.dumps(record["event_types"], ensure_ascii=True),
+                json.dumps(record["entities"], ensure_ascii=True),
+                record["sentiment"],
+                record["time_horizon"],
                 record["relevance_score"],
                 record["relevance_reason"],
                 record["summary"],
-                json.dumps(record["embedding"]),
+                vector_for_db(record["embedding"], db_type),
                 processed_at,
+                record["primary_country"],
+                record["primary_sector"],
             ),
         )
-        db.execute(
-            "UPDATE raw_articles SET processed_at = ? WHERE id = ?",
-            (processed_at, raw_id),
-        )
+        db.execute("UPDATE raw_articles SET processed_at = ? WHERE id = ?", (processed_at, raw_id))
         db.commit()
         return "inserted"
 
-    existing = db.table("enriched_articles").select("id").eq("raw_id", raw_id).limit(1).execute()
-    if existing.data:
-        (
-            db.table("raw_articles")
-            .update({"processed_at": processed_at})
-            .eq("id", raw_id)
-            .execute()
-        )
+    existing = db.execute("SELECT id FROM enriched_articles WHERE raw_id = %s LIMIT 1", (raw_id,)).fetchone()
+    if existing:
+        db.execute("UPDATE raw_articles SET processed_at = %s WHERE id = %s", (processed_at, raw_id))
+        db.commit()
         return "exists"
 
-    db.table("enriched_articles").insert(
-        {
-            "raw_id": raw_id,
-            "country": record["country"],
-            "sector": record["sector"],
-            "relevance_score": record["relevance_score"],
-            "relevance_reason": record["relevance_reason"],
-            "summary": record["summary"],
-            "embedding": record["embedding"],
-            "enriched_at": processed_at,
-        }
-    ).execute()
-
-    db.table("raw_articles").update({"processed_at": processed_at}).eq("id", raw_id).execute()
+    db.execute(
+        """
+        INSERT INTO enriched_articles
+            (raw_id, taxonomy_version, primary_country, countries, regions,
+             primary_sector, sector_tags, themes, event_types, entities,
+             sentiment, time_horizon, relevance_score, relevance_reason, summary,
+             embedding, tag_status, enriched_at, country, sector)
+        VALUES
+            (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s,
+             'ai_generated', %s, %s, %s)
+        """,
+        (
+            raw_id,
+            record["taxonomy_version"],
+            record["primary_country"],
+            json_for_db(record["countries"], db_type),
+            json_for_db(record["regions"], db_type),
+            record["primary_sector"],
+            json_for_db(record["sector_tags"], db_type),
+            json_for_db(record["themes"], db_type),
+            json_for_db(record["event_types"], db_type),
+            json_for_db(record["entities"], db_type),
+            record["sentiment"],
+            record["time_horizon"],
+            record["relevance_score"],
+            record["relevance_reason"],
+            record["summary"],
+            vector_for_db(record["embedding"], db_type),
+            processed_at,
+            record["primary_country"],
+            record["primary_sector"],
+        ),
+    )
+    db.execute("UPDATE raw_articles SET processed_at = %s WHERE id = %s", (processed_at, raw_id))
+    db.commit()
     return "inserted"
 
 
@@ -383,7 +301,8 @@ def run(
         raise RuntimeError("OPENAI_API_KEY is required")
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
-    db, db_type = get_db(mode)
+    taxonomy = load_taxonomy()
+    db, db_type = connect_db(mode)
 
     total_processed = 0
     total_inserted = 0
@@ -400,14 +319,13 @@ def run(
 
         batches += 1
         log.info(
-            "Starting Layer 2 enrichment batch %s: %s articles (mode=%s, db=%s, model=%s, embed=%s/%s, drain=%s)",
+            "Starting enrichment batch %s: articles=%s mode=%s db=%s model=%s taxonomy=%s drain=%s",
             batches,
             len(articles),
             mode,
             db_type,
             model,
-            embedding_model,
-            embedding_dims,
+            taxonomy.get("version"),
             drain,
         )
 
@@ -419,19 +337,24 @@ def run(
             raw_id = int(article["id"])
             try:
                 hard_tags = parse_hard_country_tags(article.get("hard_country_tags"))
-                country_hint = hard_tags[0].upper() if hard_tags else None
+                country_hint = hard_tags[0] if hard_tags else None
 
                 enriched = call_openai_enrichment(
                     client=client,
                     model=model,
                     article=article,
                     country_hint=country_hint,
+                    taxonomy=taxonomy,
                 )
 
-                vector_text = (
-                    f"{article.get('headline', '')}\n\n"
-                    f"{article.get('lede', '')}\n\n"
-                    f"{enriched['summary']}"
+                vector_text = "\n\n".join(
+                    [
+                        article.get("headline") or "",
+                        article.get("lede") or "",
+                        enriched["summary"],
+                        " ".join(enriched["themes"]),
+                        " ".join(enriched["sector_tags"]),
+                    ]
                 )
                 enriched["embedding"] = make_embedding(
                     client=client,
@@ -448,7 +371,7 @@ def run(
 
                 if idx % 10 == 0:
                     log.info(
-                        "Batch %s progress %s/%s (inserted=%s, exists=%s, errors=%s)",
+                        "Batch %s progress %s/%s inserted=%s exists=%s errors=%s",
                         batches,
                         idx,
                         len(articles),
@@ -457,12 +380,15 @@ def run(
                         errors,
                     )
 
-                # Small pause to avoid burst limits on smaller API tiers.
                 time.sleep(0.2)
 
             except Exception as e:
                 errors += 1
                 log.exception("Failed raw_id=%s: %s", raw_id, e)
+                try:
+                    db.rollback()
+                except Exception:
+                    pass
 
         total_processed += len(articles)
         total_inserted += inserted
@@ -499,7 +425,7 @@ def run(
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="IOA Layer 2 Enrichment")
+    parser = argparse.ArgumentParser(description="In(Sights) Tracker Layer 2 enrichment")
     parser.add_argument("--batch-size", type=int, default=DEFAULT_BATCH_SIZE)
     parser.add_argument("--mode", choices=["dev", "prod"], default="dev")
     parser.add_argument("--model", default=DEFAULT_MODEL)

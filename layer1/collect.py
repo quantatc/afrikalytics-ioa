@@ -6,19 +6,20 @@ Handles RSS ingestion and HTML scraping for both source tiers:
   - Tier 2: Country-specific    (country_specific_sources key in sources.yaml)
 
 Country-specific sources are hard-tagged at ingestion time with their ISO
-country code, saving Haiku tokens in Layer 2 (country field pre-filled,
-AI only classifies sector + relevance).
+country code, giving Layer 2 a country hint for taxonomy tagging.
 
-Writes raw articles to local SQLite (dev) or Supabase (prod).
-Run via cron or triggered by n8n HTTP POST.
+Writes raw articles to local SQLite (dev) or Postgres (prod).
+Run via cron/systemd on the application server.
 
 Usage (with uv):
     uv run python collect.py                        # all active sources, dev mode
     uv run python collect.py --source "Reuters"     # single source by name fragment
     uv run python collect.py --tier country         # only country-specific sources
     uv run python collect.py --tier pan             # only pan-africa sources
-    uv run python collect.py --mode prod            # write to Supabase
+    uv run python collect.py --mode prod            # write to Postgres via DATABASE_URL
 """
+
+# ruff: noqa: E402
 
 # /// script
 # requires-python = ">=3.11"
@@ -28,7 +29,7 @@ Usage (with uv):
 #   "beautifulsoup4>=4.12.3",
 #   "lxml>=5.3.0",
 #   "pyyaml>=6.0.2",
-#   "supabase>=2.10.0",
+#   "psycopg[binary]>=3.2.0",
 # ]
 # ///
 
@@ -39,6 +40,7 @@ import logging
 import os
 import re
 import sqlite3
+import sys
 import time
 from datetime import datetime, timedelta, timezone
 from pathlib import Path
@@ -48,6 +50,12 @@ import feedparser
 import requests
 import yaml
 from bs4 import BeautifulSoup
+
+REPO_ROOT = Path(__file__).resolve().parents[1]
+if str(REPO_ROOT) not in sys.path:
+    sys.path.insert(0, str(REPO_ROOT))
+
+from ioa_core.db import connect_db, json_dumps, json_for_db, now_utc_iso
 
 
 def load_repo_env() -> None:
@@ -181,32 +189,8 @@ SECTOR_QUERY_HINTS = {
 # ── Database ──────────────────────────────────────────────────────────────────
 
 def get_db(mode: str = "dev"):
-    """Return SQLite connection (dev) or Supabase client (prod)."""
-    if mode == "prod":
-        from supabase import create_client
-        url = os.environ["SUPABASE_URL"]
-        key = os.environ["SUPABASE_KEY"]
-        return create_client(url, key), "supabase"
-
-    conn = sqlite3.connect("ioa_dev.db")
-    conn.row_factory = sqlite3.Row
-    conn.execute("""
-        CREATE TABLE IF NOT EXISTS raw_articles (
-            id                INTEGER PRIMARY KEY AUTOINCREMENT,
-            url_hash          TEXT    UNIQUE NOT NULL,
-            url               TEXT    NOT NULL,
-            source_name       TEXT    NOT NULL,
-            source_tier       TEXT    NOT NULL DEFAULT 'pan-africa',
-            hard_country_tags TEXT,        -- JSON list e.g. '["NG"]', null for Tier 1
-            headline          TEXT,
-            lede              TEXT,
-            published_at      TEXT,
-            scraped_at        TEXT    NOT NULL,
-            processed_at      TEXT    DEFAULT NULL
-        )
-    """)
-    conn.commit()
-    return conn, "sqlite"
+    """Return SQLite connection (dev) or Postgres connection (prod)."""
+    return connect_db(mode)
 
 
 def url_hash(url: str) -> str:
@@ -219,27 +203,26 @@ def article_exists(db, db_type: str, uhash: str) -> bool:
             "SELECT 1 FROM raw_articles WHERE url_hash = ?", (uhash,)
         ).fetchone()
         return row is not None
-    else:
-        result = db.table("raw_articles").select("id").eq("url_hash", uhash).execute()
-        return len(result.data) > 0
+
+    row = db.execute("SELECT 1 FROM raw_articles WHERE url_hash = %s", (uhash,)).fetchone()
+    return row is not None
 
 
 def insert_article(db, db_type: str, record: dict) -> bool:
     """Returns True if inserted, False if duplicate."""
-    import json
     if db_type == "sqlite":
         # Serialise list to JSON string for SQLite
         if isinstance(record.get("hard_country_tags"), list):
-            record["hard_country_tags"] = json.dumps(record["hard_country_tags"])
+            record["hard_country_tags"] = json_dumps(record["hard_country_tags"])
         try:
             db.execute(
                 """
                 INSERT INTO raw_articles
                     (url_hash, url, source_name, source_tier, hard_country_tags,
-                     headline, lede, published_at, scraped_at)
+                     language, paywall_status, headline, lede, published_at, scraped_at)
                 VALUES
                     (:url_hash, :url, :source_name, :source_tier, :hard_country_tags,
-                     :headline, :lede, :published_at, :scraped_at)
+                     :language, :paywall_status, :headline, :lede, :published_at, :scraped_at)
                 """,
                 record,
             )
@@ -247,12 +230,36 @@ def insert_article(db, db_type: str, record: dict) -> bool:
             return True
         except sqlite3.IntegrityError:
             return False
-    else:
-        try:
-            db.table("raw_articles").insert(record).execute()
-            return True
-        except Exception:
-            return False
+    try:
+        db.execute(
+            """
+            INSERT INTO raw_articles
+                (url_hash, url, source_name, source_tier, hard_country_tags,
+                 language, paywall_status, headline, lede, published_at, scraped_at)
+            VALUES
+                (%s, %s, %s, %s, %s, %s, %s, %s, %s, %s, %s)
+            """,
+            (
+                record["url_hash"],
+                record["url"],
+                record["source_name"],
+                record["source_tier"],
+                json_for_db(record.get("hard_country_tags"), db_type)
+                if record.get("hard_country_tags") is not None
+                else None,
+                record.get("language", "en"),
+                record.get("paywall_status", "open"),
+                record.get("headline"),
+                record.get("lede"),
+                record.get("published_at"),
+                record.get("scraped_at"),
+            ),
+        )
+        db.commit()
+        return True
+    except Exception:
+        db.rollback()
+        return False
 
 
 # ── Shared helpers ────────────────────────────────────────────────────────────
@@ -940,6 +947,58 @@ def check_health(stats_list: list) -> list:
     ]
 
 
+def write_source_health(db, db_type: str, stats_list: list[dict]) -> None:
+    run_at = now_utc_iso()
+    for stats in stats_list:
+        had_error = bool(stats.get("errors", 0) or stats.get("fetched", 0) == 0)
+        params = {
+            "source_name": stats.get("source"),
+            "source_tier": stats.get("tier"),
+            "source_url": stats.get("url", ""),
+            "run_at": run_at,
+            "articles_fetched": int(stats.get("fetched", 0)),
+            "articles_inserted": int(stats.get("inserted", 0)),
+            "articles_duped": int(stats.get("dupes", 0)),
+            "had_error": had_error,
+            "error_msg": stats.get("error_reason") or ("zero articles fetched" if had_error else None),
+        }
+
+        if db_type == "sqlite":
+            db.execute(
+                """
+                INSERT INTO source_health
+                    (source_name, source_tier, source_url, run_at, articles_fetched,
+                     articles_inserted, articles_duped, had_error, error_msg)
+                VALUES
+                    (:source_name, :source_tier, :source_url, :run_at, :articles_fetched,
+                     :articles_inserted, :articles_duped, :had_error, :error_msg)
+                """,
+                params,
+            )
+        else:
+            db.execute(
+                """
+                INSERT INTO source_health
+                    (source_name, source_tier, source_url, run_at, articles_fetched,
+                     articles_inserted, articles_duped, had_error, error_msg)
+                VALUES
+                    (%s, %s, %s, %s, %s, %s, %s, %s, %s)
+                """,
+                (
+                    params["source_name"],
+                    params["source_tier"],
+                    params["source_url"],
+                    params["run_at"],
+                    params["articles_fetched"],
+                    params["articles_inserted"],
+                    params["articles_duped"],
+                    params["had_error"],
+                    params["error_msg"],
+                ),
+            )
+    db.commit()
+
+
 # ── Main ──────────────────────────────────────────────────────────────────────
 
 def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev"):
@@ -983,7 +1042,7 @@ def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev"):
     tier2_new   = sum(s["inserted"] for s in all_stats if s["tier"] == "country-specific")
 
     log.info(f"\n{'='*60}")
-    log.info(f"Collection complete")
+    log.info("Collection complete")
     log.info(f"  New articles : {total_new} (pan-africa={tier1_new}, country-specific={tier2_new})")
     log.info(f"  Duplicates   : {total_dupes}")
 
@@ -1000,32 +1059,33 @@ def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev"):
     working     = [s for s in all_stats if s["fetched"] > 0 and s["errors"] == 0]
 
     with open(report_path, "w", encoding="utf-8") as f:
-        f.write(f"# IOA Collector Health Report\n")
+        f.write("# IOA Collector Health Report\n")
         f.write(f"**Run:** {run_time}  \n")
         f.write(f"**Sources processed:** {len(all_stats)}  \n")
         f.write(f"**New articles:** {total_new} (pan-africa: {tier1_new} | country-specific: {tier2_new})  \n")
         f.write(f"**Duplicates skipped:** {total_dupes}  \n\n")
 
-        f.write(f"---\n\n")
+        f.write("---\n\n")
 
         # Working sources
         f.write(f"## ✅ Working Sources ({len(working)})\n\n")
-        f.write(f"| Source | Tier | New | Dupes |\n")
-        f.write(f"|--------|------|-----|-------|\n")
+        f.write("| Source | Tier | New | Dupes |\n")
+        f.write("|--------|------|-----|-------|\n")
         for s in sorted(working, key=lambda x: x["inserted"], reverse=True):
             f.write(f"| {s['source']} | {s['tier']} | {s['inserted']} | {s['dupes']} |\n")
 
-        f.write(f"\n---\n\n")
+        f.write("\n---\n\n")
 
         # Failed sources grouped by likely cause
         f.write(f"## ❌ Failed Sources ({len(alerts)}) — Needs Inspection\n\n")
-        f.write(f"| Source | Tier | URL | Likely Cause |\n")
-        f.write(f"|--------|------|-----|---------------|\n")
+        f.write("| Source | Tier | URL | Likely Cause |\n")
+        f.write("|--------|------|-----|---------------|\n")
         for a in sorted(alerts, key=lambda x: x["tier"]):
             f.write(f"| {a['source']} | {a['tier']} | {a['url']} | {a['reason']} |\n")
 
     log.info(f"\n📋 Health report written → {report_path}")
 
+    write_source_health(db, db_type, all_stats)
     return {"inserted": total_new, "dupes": total_dupes, "alerts": alerts}
 
 

@@ -21,7 +21,6 @@ Behaviour:
 
 import argparse
 import csv
-import re
 from pathlib import Path
 
 import yaml
@@ -112,7 +111,7 @@ COUNTRY_LANGUAGE = {
 ISO_REGION = {
     # North Africa
     "DZ": "north-africa", "EG": "north-africa", "LY": "north-africa",
-    "MA": "north-africa", "MR": "north-africa", "SD": "north-africa",
+    "MA": "north-africa", "SD": "north-africa",
     "TN": "north-africa",
     # West Africa
     "BJ": "west-africa", "BF": "west-africa", "CV": "west-africa",
@@ -242,7 +241,7 @@ def save_yaml(config: dict, dry_run: bool = False):
     # Read existing header comments (lines starting with #)
     with open(SOURCES_FILE, encoding="utf-8") as f:
         lines = f.readlines()
-    header = "".join(l for l in lines if l.startswith("#") or l.strip() == "")
+    header = "".join(line for line in lines if line.startswith("#") or line.strip() == "")
     header = header.rstrip("\n") + "\n\n"
 
     body = yaml.dump(config, allow_unicode=True, sort_keys=False, default_flow_style=False)
@@ -295,32 +294,32 @@ def run(csv_path: Path, dry_run: bool = False):
 
     # ── Summary ───────────────────────────────────────────────────────────────
     print(f"\n{'='*60}")
-    print(f"Migration summary")
+    print("Migration summary")
     print(f"  Pan-Africa sources added    : {len(added_pan)}")
     print(f"  Country-specific added      : {len(added_country)}")
     print(f"  Duplicates skipped          : {len(skipped_dupe)}")
     print(f"  Empty/invalid URLs skipped  : {len(skipped_empty)}")
 
     if added_pan:
-        print(f"\nNew pan-africa sources:")
+        print("\nNew pan-africa sources:")
         for n in added_pan:
             print(f"  + {n}")
 
     if added_country:
-        print(f"\nNew country-specific sources:")
+        print("\nNew country-specific sources:")
         for n in added_country:
             print(f"  + {n}")
 
     if skipped_dupe:
-        print(f"\nSkipped (already in sources.yaml):")
+        print("\nSkipped (already in sources.yaml):")
         for n in skipped_dupe:
             print(f"  ~ {n}")
 
     save_yaml(config, dry_run=dry_run)
 
     if not dry_run:
-        print(f"\n✅  sources.yaml updated.")
-        print(f"    Next step: run `uv run python collect.py` to test new sources.")
+        print("\n✅  sources.yaml updated.")
+        print("    Next step: run `uv run python collect.py` to test new sources.")
 
 
 if __name__ == "__main__":

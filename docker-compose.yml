@@ -1,0 +1,39 @@
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    container_name: insights-tracker-db
+    environment:
+      POSTGRES_DB: insights_tracker
+      POSTGRES_USER: insights_tracker
+      POSTGRES_PASSWORD: ${POSTGRES_PASSWORD:?set POSTGRES_PASSWORD in .env}
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+      - ./layer1/schema.sql:/docker-entrypoint-initdb.d/001_schema.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U insights_tracker -d insights_tracker"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+    restart: unless-stopped
+
+  app:
+    build: .
+    container_name: insights-tracker-app
+    depends_on:
+      db:
+        condition: service_healthy
+    env_file:
+      - .env
+    environment:
+      DATABASE_URL: postgresql://insights_tracker:${POSTGRES_PASSWORD}@db:5432/insights_tracker
+    ports:
+      - "8501:8501"
+    volumes:
+      - ./layer1/logs:/app/layer1/logs
+      - ./layer2/logs:/app/layer2/logs
+      - ./layer3/logs:/app/layer3/logs
+      - ./layer3/reports:/app/layer3/reports
+    restart: unless-stopped
+
+volumes:
+  pgdata:

@@ -63,8 +63,7 @@
 #   - The collector uses this to hard-tag articles at ingestion time,
 #     bypassing the need for LLM country detection on obvious sources
 #     (e.g. a Nigeria-only newspaper doesn't need AI to confirm it's NG)
-#   - This saves Haiku tokens in Layer 2 — country is pre-filled, AI only
-#     needs to classify sector + relevance
+#   - This gives Layer 2 a country hint for taxonomy tagging.
 # ════════════════════════════════════════════════════════════════════════════
 
 sources:

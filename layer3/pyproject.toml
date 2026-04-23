@@ -5,7 +5,8 @@ description = "IOA Intelligence Briefing — Layer 3 synthesis"
 requires-python = ">=3.11"
 dependencies = [
     "openai>=1.99.0",
-    "supabase>=2.10.0",
+    "psycopg[binary]>=3.2.0",
+    "pyyaml>=6.0.2",
 ]
 
 [project.optional-dependencies]
