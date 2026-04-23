@@ -15,8 +15,14 @@ from .chips import chip_row, relevance_pill, sentiment_chip, status_chip
 
 
 def _time_ago(value: Any) -> str:
-    if not value:
+    if value is None:
         return ""
+    # pandas NaT and float NaN both signal missing data
+    try:
+        if pd.isna(value):
+            return ""
+    except (TypeError, ValueError):
+        pass
     try:
         if isinstance(value, str):
             dt = datetime.fromisoformat(value.replace("Z", "+00:00"))
@@ -29,7 +35,10 @@ def _time_ago(value: Any) -> str:
     if dt.tzinfo is None:
         dt = dt.replace(tzinfo=timezone.utc)
     delta = datetime.now(timezone.utc) - dt
-    seconds = int(delta.total_seconds())
+    total = delta.total_seconds()
+    if pd.isna(total):
+        return ""
+    seconds = int(total)
     if seconds < 60:
         return "just now"
     minutes = seconds // 60
