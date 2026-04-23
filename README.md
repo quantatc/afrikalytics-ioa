@@ -5,19 +5,25 @@ Africa-focused intelligence collection, enrichment, exploration, and briefing ge
 The project ships as a Streamlit analyst workspace backed by SQLite for local development and Postgres for deployment.
 
 ```text
-Collect -> Enrich -> Explore -> Review -> Brief
+Collect -> Enrich -> Cluster -> Explore -> Review -> Brief
 ```
 
 ## Architecture
 
 ```text
-layer1/        RSS, scraper, and GDELT collection
-layer2/        OpenAI enrichment and taxonomy tagging
-layer3/        Evidence-based briefing synthesis
-app/           Streamlit analyst UI
-config/        Versioned tagging taxonomy
-ioa_core/      Shared database, taxonomy, country, and environment helpers
-docs/          Deployment notes
+layer1/            RSS, scraper, and GDELT collection
+layer2/            OpenAI enrichment, taxonomy tagging, and duplicate clustering
+layer3/            Evidence-based briefing synthesis
+app/
+  Home.py          Landing dashboard (entrypoint; also hosts auth gate)
+  pages/           Explore, Detail, Review, Briefs, Entities, Health
+  components/      Cards, chips, choropleth, filter bar, network, timeline
+  state.py         Session bootstrap + cached data loaders
+config/            Versioned tagging taxonomy
+ioa_core/          Shared DB, repository, jobs, auth, taxonomy, countries
+.streamlit/        Theme + server config
+branding/          Logo assets
+docs/              Deployment notes
 ```
 
 Production storage is plain Postgres via `DATABASE_URL`. The Docker setup uses a pgvector-enabled Postgres container, which makes the Hetzner deployment easy to move later.
@@ -28,7 +34,7 @@ Local dev uses [layer1/ioa_dev.db](layer1/ioa_dev.db) automatically.
 
 ```bash
 uv sync
-uv run streamlit run app/streamlit_app.py
+uv run streamlit run app/Home.py
 ```
 
 Collect locally:
@@ -56,6 +62,11 @@ Copy `.env.example` to `.env` and set:
 ```bash
 POSTGRES_PASSWORD=replace_with_a_strong_password
 OPENAI_API_KEY=sk-...
+
+# Optional: seeds the first admin account on first app launch.
+IOA_ADMIN_USERNAME=admin
+IOA_ADMIN_PASSWORD=change-me-now
+IOA_ADMIN_DISPLAY=Lead Analyst
 ```
 
 Start the app and Postgres:
@@ -149,13 +160,39 @@ DATABASE_URL=postgresql://insights_tracker:strong_password@127.0.0.1:5432/insigh
 
 ## Streamlit UI
 
-The UI includes:
+Multi-page analyst workspace with IOA theming, password auth, and persistent session.
 
-- Article explorer with filters for countries, regions, sectors, themes, event types, sources, status, and text search
-- Article detail view
-- Tag review and approval
-- Brief generation
-- Source health dashboard
+- **Home** — Africa choropleth, volume timeline, top themes, quick links.
+- **Explore** — choropleth + card layout, horizontal filter bar with saved views,
+  CSV + Markdown export, per-dimension colored tag chips, sentiment trend.
+- **Detail** — single-article deep dive with timeline context for the same
+  country + sector, related cluster siblings, full edit history (diff view).
+- **Review** — bulk approve by relevance threshold, single-article editor with
+  prev / next navigation, approve / reject / save-edits actions, full audit log.
+- **Briefs** — non-blocking brief generation (background worker + DB-backed job
+  queue), brief library with Markdown + HTML download, delete.
+- **Entities** — co-occurrence network graph of companies, government bodies,
+  multilaterals, and key individuals; top-entities leaderboard.
+- **Health** — error-rate bar chart per source, silent-source (>48h) list,
+  latest-run table.
+
+Authentication is a minimal password gate backed by bcrypt hashes in
+`app_users`. Set `IOA_ADMIN_USERNAME` / `IOA_ADMIN_PASSWORD` in `.env` before
+first launch; the app seeds an admin account automatically (defaults to
+`admin` / `ioa-admin` — change immediately in any real deployment).
+
+### Duplicate clustering
+
+Layer 2b groups near-duplicate coverage (same story from multiple wires) so the
+UI can flag siblings. Run alongside enrichment:
+
+```bash
+uv run python layer2/cluster.py --mode dev --window-days 14
+uv run python layer2/cluster.py --mode prod --window-days 7 --threshold 0.82
+```
+
+Each enriched article gets a `cluster_id` and `cluster_rank` (1 = canonical).
+The Detail page surfaces sibling articles; card badges show the rank.
 
 ## Adding Sources
 

@@ -147,6 +147,8 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
             "review_notes": "TEXT",
             "country": "TEXT",
             "sector": "TEXT",
+            "cluster_id": "INTEGER",
+            "cluster_rank": "INTEGER",
         },
     )
 
@@ -181,12 +183,91 @@ def ensure_sqlite_schema(conn: sqlite3.Connection) -> None:
         """
     )
 
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS briefs (
+            id              INTEGER PRIMARY KEY AUTOINCREMENT,
+            title           TEXT NOT NULL,
+            period_days     INTEGER NOT NULL,
+            min_relevance   INTEGER NOT NULL,
+            filters         TEXT NOT NULL DEFAULT '{}',
+            report_markdown TEXT NOT NULL,
+            report_json     TEXT NOT NULL DEFAULT '{}',
+            rows_analyzed   INTEGER NOT NULL DEFAULT 0,
+            model           TEXT,
+            author          TEXT,
+            created_at      TEXT NOT NULL
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS brief_jobs (
+            id          INTEGER PRIMARY KEY AUTOINCREMENT,
+            status      TEXT NOT NULL DEFAULT 'queued',
+            params      TEXT NOT NULL DEFAULT '{}',
+            brief_id    INTEGER,
+            log         TEXT,
+            author      TEXT,
+            created_at  TEXT NOT NULL,
+            started_at  TEXT,
+            finished_at TEXT
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS tag_audit (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            raw_id     INTEGER NOT NULL,
+            reviewer   TEXT,
+            before_val TEXT NOT NULL DEFAULT '{}',
+            after_val  TEXT NOT NULL DEFAULT '{}',
+            notes      TEXT,
+            created_at TEXT NOT NULL
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS saved_views (
+            id         INTEGER PRIMARY KEY AUTOINCREMENT,
+            name       TEXT NOT NULL,
+            owner      TEXT,
+            filters    TEXT NOT NULL DEFAULT '{}',
+            created_at TEXT NOT NULL,
+            UNIQUE (name, owner)
+        )
+        """
+    )
+
+    conn.execute(
+        """
+        CREATE TABLE IF NOT EXISTS app_users (
+            id            INTEGER PRIMARY KEY AUTOINCREMENT,
+            username      TEXT UNIQUE NOT NULL,
+            display_name  TEXT,
+            password_hash TEXT NOT NULL,
+            role          TEXT NOT NULL DEFAULT 'analyst',
+            created_at    TEXT NOT NULL,
+            last_login_at TEXT
+        )
+        """
+    )
+
     conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_unprocessed ON raw_articles (processed_at)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_raw_scraped_at ON raw_articles (scraped_at DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_enriched_relevance ON enriched_articles (relevance_score DESC)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_enriched_primary_country ON enriched_articles (primary_country)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_enriched_primary_sector ON enriched_articles (primary_sector)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_enriched_cluster ON enriched_articles (cluster_id)")
     conn.execute("CREATE INDEX IF NOT EXISTS idx_health_source ON source_health (source_name, run_at DESC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_briefs_created ON briefs (created_at DESC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_brief_jobs_status ON brief_jobs (status, created_at DESC)")
+    conn.execute("CREATE INDEX IF NOT EXISTS idx_tag_audit_raw ON tag_audit (raw_id, created_at DESC)")
     conn.commit()
 
 

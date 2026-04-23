@@ -113,3 +113,71 @@ CREATE TABLE IF NOT EXISTS source_health (
 
 CREATE INDEX IF NOT EXISTS idx_health_source
     ON source_health (source_name, run_at DESC);
+
+-- App-layer additions: clustering, briefs, audit, saved views, users.
+
+ALTER TABLE enriched_articles ADD COLUMN IF NOT EXISTS cluster_id BIGINT;
+ALTER TABLE enriched_articles ADD COLUMN IF NOT EXISTS cluster_rank INTEGER;
+
+CREATE INDEX IF NOT EXISTS idx_enriched_cluster ON enriched_articles (cluster_id);
+
+CREATE TABLE IF NOT EXISTS briefs (
+    id              BIGSERIAL PRIMARY KEY,
+    title           TEXT NOT NULL,
+    period_days     INTEGER NOT NULL,
+    min_relevance   INTEGER NOT NULL,
+    filters         JSONB NOT NULL DEFAULT '{}'::jsonb,
+    report_markdown TEXT NOT NULL,
+    report_json     JSONB NOT NULL DEFAULT '{}'::jsonb,
+    rows_analyzed   INTEGER NOT NULL DEFAULT 0,
+    model           TEXT,
+    author          TEXT,
+    created_at      TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_briefs_created ON briefs (created_at DESC);
+
+CREATE TABLE IF NOT EXISTS brief_jobs (
+    id          BIGSERIAL PRIMARY KEY,
+    status      TEXT NOT NULL DEFAULT 'queued',
+    params      JSONB NOT NULL DEFAULT '{}'::jsonb,
+    brief_id    BIGINT REFERENCES briefs(id) ON DELETE SET NULL,
+    log         TEXT,
+    author      TEXT,
+    created_at  TIMESTAMPTZ NOT NULL DEFAULT now(),
+    started_at  TIMESTAMPTZ,
+    finished_at TIMESTAMPTZ
+);
+
+CREATE INDEX IF NOT EXISTS idx_brief_jobs_status ON brief_jobs (status, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS tag_audit (
+    id         BIGSERIAL PRIMARY KEY,
+    raw_id     BIGINT NOT NULL REFERENCES raw_articles(id) ON DELETE CASCADE,
+    reviewer   TEXT,
+    before_val JSONB NOT NULL DEFAULT '{}'::jsonb,
+    after_val  JSONB NOT NULL DEFAULT '{}'::jsonb,
+    notes      TEXT,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
+CREATE INDEX IF NOT EXISTS idx_tag_audit_raw ON tag_audit (raw_id, created_at DESC);
+
+CREATE TABLE IF NOT EXISTS saved_views (
+    id         BIGSERIAL PRIMARY KEY,
+    name       TEXT NOT NULL,
+    owner      TEXT,
+    filters    JSONB NOT NULL DEFAULT '{}'::jsonb,
+    created_at TIMESTAMPTZ NOT NULL DEFAULT now(),
+    UNIQUE (name, owner)
+);
+
+CREATE TABLE IF NOT EXISTS app_users (
+    id            BIGSERIAL PRIMARY KEY,
+    username      TEXT UNIQUE NOT NULL,
+    display_name  TEXT,
+    password_hash TEXT NOT NULL,
+    role          TEXT NOT NULL DEFAULT 'analyst',
+    created_at    TIMESTAMPTZ NOT NULL DEFAULT now(),
+    last_login_at TIMESTAMPTZ
+);
