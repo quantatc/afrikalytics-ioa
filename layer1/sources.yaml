@@ -94,7 +94,7 @@ sources:
   gdelt_max_records: 250
   gdelt_min_interval_seconds: 5
   gdelt_max_retries: 3
-  gdelt_query: '"Africa" OR "African"'
+  gdelt_query: '("Africa" OR "African")'
   notes: Simple explicit query — avoids GDELT 200-char limit on complex boolean queries.
 - name: Al Jazeera Africa
   url: https://www.aljazeera.com/africa/
