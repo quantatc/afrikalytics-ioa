@@ -27,7 +27,7 @@ services:
     environment:
       DATABASE_URL: postgresql://insights_tracker:${POSTGRES_PASSWORD}@db:5432/insights_tracker
     ports:
-      - "8501:8501"
+      - "8502:8501"
     volumes:
       - ./layer1/logs:/app/layer1/logs
       - ./layer2/logs:/app/layer2/logs
