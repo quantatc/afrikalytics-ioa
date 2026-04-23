@@ -908,7 +908,7 @@ def ingest_gdelt_doc(source: dict, db, db_type: str) -> dict:
 
 # ── Source loader ─────────────────────────────────────────────────────────────
 
-def load_sources(tier_filter: str = None, source_filter: str = None) -> list:
+def load_sources(tier_filter: str = None, source_filter: str = None, exclude_filter: str = None, exclude_type: str = None) -> list:
     """Load and merge both tiers from sources.yaml. Apply optional filters."""
     with open(SOURCES_FILE, encoding="utf-8") as f:
         config = yaml.safe_load(f)
@@ -925,9 +925,17 @@ def load_sources(tier_filter: str = None, source_filter: str = None) -> list:
     elif tier_filter == "country":
         all_sources = [s for s in all_sources if s.get("source_tier") == "country-specific"]
 
-    # Name filter
+    # Name filter (include)
     if source_filter:
         all_sources = [s for s in all_sources if source_filter.lower() in s["name"].lower()]
+
+    # Name exclude
+    if exclude_filter:
+        all_sources = [s for s in all_sources if exclude_filter.lower() not in s["name"].lower()]
+
+    # Type exclude
+    if exclude_type:
+        all_sources = [s for s in all_sources if s.get("type") != exclude_type]
 
     return all_sources
 
@@ -1001,8 +1009,8 @@ def write_source_health(db, db_type: str, stats_list: list[dict]) -> None:
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
-def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev"):
-    sources = load_sources(tier_filter=tier_filter, source_filter=source_filter)
+def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev", exclude_filter: str = None, exclude_type: str = None):
+    sources = load_sources(tier_filter=tier_filter, source_filter=source_filter, exclude_filter=exclude_filter, exclude_type=exclude_type)
 
     if not sources:
         log.error("No sources matched filters — nothing to process")
@@ -1091,8 +1099,11 @@ def run(source_filter: str = None, tier_filter: str = None, mode: str = "dev"):
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description="IOA Layer 1 Collector")
-    parser.add_argument("--source", help="Filter by source name (partial match)")
-    parser.add_argument("--tier",   choices=["pan", "country"], help="Filter by source tier")
-    parser.add_argument("--mode",   default="dev", choices=["dev", "prod"])
+    parser.add_argument("--source",       help="Include only sources whose name contains this string (partial match)")
+    parser.add_argument("--exclude",      help="Exclude sources whose name contains this string (partial match)")
+    parser.add_argument("--exclude-type", help="Exclude sources of this type (e.g. gdelt-doc)")
+    parser.add_argument("--tier",         choices=["pan", "country"], help="Filter by source tier")
+    parser.add_argument("--mode",         default="dev", choices=["dev", "prod"])
     args = parser.parse_args()
-    run(source_filter=args.source, tier_filter=args.tier, mode=args.mode)
+    run(source_filter=args.source, tier_filter=args.tier, mode=args.mode,
+        exclude_filter=args.exclude, exclude_type=args.exclude_type)
