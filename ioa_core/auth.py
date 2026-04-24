@@ -79,6 +79,55 @@ def ensure_default_admin(mode: str) -> None:
     conn.commit()
 
 
+def list_users(mode: str) -> list[dict]:
+    conn, db_type = connect_db(mode)
+    if db_type == "sqlite":
+        rows = conn.execute(
+            "SELECT id, username, display_name, role, created_at, last_login_at FROM app_users ORDER BY created_at"
+        ).fetchall()
+    else:
+        rows = conn.execute(
+            "SELECT id, username, display_name, role, created_at, last_login_at FROM app_users ORDER BY created_at"
+        ).fetchall()
+    return [dict(r) for r in rows]
+
+
+def create_user(mode: str, username: str, display_name: str, password: str, role: str = "analyst") -> None:
+    conn, db_type = connect_db(mode)
+    pw_hash = hash_password(password)
+    ts = now_utc_iso()
+    if db_type == "sqlite":
+        conn.execute(
+            "INSERT INTO app_users (username, display_name, password_hash, role, created_at) VALUES (?, ?, ?, ?, ?)",
+            (username.strip(), display_name.strip(), pw_hash, role, ts),
+        )
+    else:
+        conn.execute(
+            "INSERT INTO app_users (username, display_name, password_hash, role, created_at) VALUES (%s, %s, %s, %s, %s)",
+            (username.strip(), display_name.strip(), pw_hash, role, ts),
+        )
+    conn.commit()
+
+
+def change_password(mode: str, user_id: int, new_password: str) -> None:
+    conn, db_type = connect_db(mode)
+    pw_hash = hash_password(new_password)
+    if db_type == "sqlite":
+        conn.execute("UPDATE app_users SET password_hash = ? WHERE id = ?", (pw_hash, user_id))
+    else:
+        conn.execute("UPDATE app_users SET password_hash = %s WHERE id = %s", (pw_hash, user_id))
+    conn.commit()
+
+
+def delete_user(mode: str, user_id: int) -> None:
+    conn, db_type = connect_db(mode)
+    if db_type == "sqlite":
+        conn.execute("DELETE FROM app_users WHERE id = ?", (user_id,))
+    else:
+        conn.execute("DELETE FROM app_users WHERE id = %s", (user_id,))
+    conn.commit()
+
+
 def authenticate(mode: str, username: str, password: str) -> Optional[dict]:
     user = _fetch_user(mode, username.strip())
     if not user:

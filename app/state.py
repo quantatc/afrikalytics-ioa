@@ -65,10 +65,7 @@ def _login_gate(mode: str) -> dict | None:
                 else:
                     st.error("Invalid credentials.")
 
-            st.caption(
-                "First run seeds an admin account from `IOA_ADMIN_USERNAME` / `IOA_ADMIN_PASSWORD` "
-                "(defaults: admin / ioa-admin)."
-            )
+            st.caption("Contact your administrator if you need access.")
     return None
 
 
