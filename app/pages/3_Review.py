@@ -94,7 +94,7 @@ with bulk_c[2]:
                 notes="bulk approve",
             )
         st.cache_data.clear()
-        st.session_state[idx_key] = 0
+        st.session_state["_review_idx"] = 0
         st.success(f"Approved {n} articles.")
         st.rerun()
 with bulk_c[3]:
