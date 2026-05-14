@@ -126,31 +126,47 @@ def fetch_enriched_with_raw(
     return [_decode_row(dict(r)) for r in rows]
 
 
+def _normalize(value, lower: bool = True) -> set[str]:
+    if not value:
+        return set()
+    if isinstance(value, str):
+        items = [value]
+    else:
+        items = list(value)
+    out = set()
+    for v in items:
+        s = str(v).strip()
+        if not s:
+            continue
+        out.add(s.lower() if lower else s.upper())
+    return out
+
+
 def apply_filters(
     rows: list[dict],
-    country: str | None = None,
-    region: str | None = None,
-    sector: str | None = None,
-    theme: str | None = None,
-    event_type: str | None = None,
+    country=None,
+    region=None,
+    sector=None,
+    theme=None,
+    event_type=None,
 ) -> list[dict]:
-    country = (country or "").strip().upper()
-    region = (region or "").strip().lower()
-    sector_l = (sector or "").strip().lower()
-    theme_l = (theme or "").strip().lower()
-    event_l = (event_type or "").strip().lower()
+    countries = _normalize(country, lower=False)
+    regions = _normalize(region)
+    sectors = _normalize(sector)
+    themes = _normalize(theme)
+    events = _normalize(event_type)
 
     out = []
     for row in rows:
-        if country and country not in {str(c).upper() for c in row.get("countries", [])}:
+        if countries and not (countries & {str(c).upper() for c in row.get("countries", [])}):
             continue
-        if region and region not in {str(r).lower() for r in row.get("regions", [])}:
+        if regions and not (regions & {str(r).lower() for r in row.get("regions", [])}):
             continue
-        if sector_l and sector_l not in {str(s).lower() for s in row.get("sector_tags", [])}:
+        if sectors and not (sectors & {str(s).lower() for s in row.get("sector_tags", [])}):
             continue
-        if theme_l and theme_l not in {str(t).lower() for t in row.get("themes", [])}:
+        if themes and not (themes & {str(t).lower() for t in row.get("themes", [])}):
             continue
-        if event_l and event_l not in {str(e).lower() for e in row.get("event_types", [])}:
+        if events and not (events & {str(e).lower() for e in row.get("event_types", [])}):
             continue
         out.append(row)
     return out
@@ -298,11 +314,11 @@ def run(
     period_days: int = DEFAULT_PERIOD_DAYS,
     max_articles: int = DEFAULT_MAX_ARTICLES,
     min_relevance: int = DEFAULT_MIN_RELEVANCE,
-    country: str | None = None,
-    region: str | None = None,
-    sector: str | None = None,
-    theme: str | None = None,
-    event_type: str | None = None,
+    country=None,
+    region=None,
+    sector=None,
+    theme=None,
+    event_type=None,
     no_db_write: bool = False,
 ) -> dict:
     if "OPENAI_API_KEY" not in os.environ:
@@ -315,14 +331,21 @@ def run(
 
     end_dt = now_utc()
     start_dt = end_dt - timedelta(days=period_days)
+    def _as_list(v):
+        if not v:
+            return []
+        if isinstance(v, str):
+            return [v]
+        return [str(x) for x in v if str(x).strip()]
+
     filters = {
         "period_days": period_days,
         "min_relevance": min_relevance,
-        "country": country or "",
-        "region": region or "",
-        "sector": sector or "",
-        "theme": theme or "",
-        "event_type": event_type or "",
+        "country": _as_list(country),
+        "region": _as_list(region),
+        "sector": _as_list(sector),
+        "theme": _as_list(theme),
+        "event_type": _as_list(event_type),
     }
 
     rows = fetch_enriched_with_raw(

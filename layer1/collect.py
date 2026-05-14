@@ -629,9 +629,13 @@ def ingest_rss(source: dict, db, db_type: str) -> dict:
                 *entry.published_parsed[:6], tzinfo=timezone.utc
             ).isoformat()
 
+        headline = entry.get("title", "").strip()
+        if not headline:
+            continue
+
         record = build_record(
             source, url,
-            headline=entry.get("title", "").strip(),
+            headline=headline,
             lede=lede,
             published_at=published_at,
         )
@@ -739,6 +743,8 @@ def ingest_scraper(source: dict, db, db_type: str) -> dict:
         headline = tag.get_text(separator=" ").strip()
         href     = urljoin(resp.url, tag.get("href", ""))
         if not href.startswith("http"):
+            continue
+        if not headline:
             continue
         if href in seen_hrefs:
             continue
@@ -859,6 +865,8 @@ def ingest_gdelt_doc(source: dict, db, db_type: str) -> dict:
                     continue
 
                 headline = (article.get("title") or "").strip()
+                if not headline:
+                    continue
                 lede = (
                     article.get("description")
                     or article.get("snippet")

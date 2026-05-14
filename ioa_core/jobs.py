@@ -132,15 +132,18 @@ def _run_brief_job(mode: str, job_id: int) -> None:
         except json.JSONDecodeError:
             report_json = {}
 
+        def _label(value) -> str:
+            if not value:
+                return ""
+            if isinstance(value, (list, tuple)):
+                return ",".join(str(x) for x in value if str(x).strip())
+            return str(value)
+
         title_parts = []
-        if params.get("country"):
-            title_parts.append(params["country"])
-        if params.get("region"):
-            title_parts.append(params["region"])
-        if params.get("sector"):
-            title_parts.append(params["sector"])
-        if params.get("theme"):
-            title_parts.append(params["theme"])
+        for key in ("country", "region", "sector", "theme"):
+            label = _label(params.get(key))
+            if label:
+                title_parts.append(label)
         if not title_parts:
             title_parts.append("Pan-Africa")
         title = f"IOA Brief — {' / '.join(title_parts)} ({params.get('period_days', 30)}d)"

@@ -53,19 +53,20 @@ with gen_tab:
 
         r2 = st.columns(3)
         with r2[0]:
-            country = st.selectbox(
-                "Country", [""] + country_opts, format_func=lambda x: "All" if not x else country_display_name(x)
+            countries = st.multiselect(
+                "Countries", country_opts, format_func=country_display_name,
+                help="Empty = no country filter (all Africa).",
             )
         with r2[1]:
-            region = st.selectbox("Region", [""] + region_opts, format_func=lambda x: "All" if not x else x)
+            regions = st.multiselect("Regions", region_opts)
         with r2[2]:
-            sector = st.selectbox("Sector", [""] + sector_opts, format_func=lambda x: "All" if not x else x)
+            sectors = st.multiselect("Sectors", sector_opts)
 
         r3 = st.columns(2)
         with r3[0]:
-            theme = st.selectbox("Theme", [""] + theme_opts, format_func=lambda x: "All" if not x else x)
+            themes = st.multiselect("Themes", theme_opts)
         with r3[1]:
-            event_type = st.selectbox("Event", [""] + event_opts, format_func=lambda x: "All" if not x else x)
+            event_types = st.multiselect("Events", event_opts)
 
         submit = st.form_submit_button("Queue brief", type="primary", width="stretch")
 
@@ -74,11 +75,11 @@ with gen_tab:
             "period_days": int(period_days),
             "min_relevance": int(min_rel),
             "max_articles": int(max_articles),
-            "country": country or "",
-            "region": region or "",
-            "sector": sector or "",
-            "theme": theme or "",
-            "event_type": event_type or "",
+            "country": countries,
+            "region": regions,
+            "sector": sectors,
+            "theme": themes,
+            "event_type": event_types,
         }
         job_id = enqueue_brief_job(mode, params, author)
         spawn_worker(mode, job_id)
@@ -124,8 +125,14 @@ with queue_tab:
             head = st.columns([0.5, 0.15, 0.15, 0.2])
             with head[0]:
                 params = j.get("params") or {}
+                def _fmt(v):
+                    if isinstance(v, (list, tuple)):
+                        return ",".join(str(x) for x in v) if v else ""
+                    return str(v) if v else ""
                 filt_label = " · ".join(
-                    [f"{k}={v}" for k, v in params.items() if v and k in ("country", "region", "sector", "theme", "event_type")]
+                    f"{k}={_fmt(v)}"
+                    for k, v in params.items()
+                    if _fmt(v) and k in ("country", "region", "sector", "theme", "event_type")
                 ) or "no filters"
                 st.markdown(
                     f"**#{j['id']}** · <span style='color:{color};font-weight:600;'>{status}</span> · "

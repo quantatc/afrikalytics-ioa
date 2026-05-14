@@ -49,7 +49,9 @@ with m[3]:
 st.divider()
 
 st.markdown("##### Error rate by source (last 14 days)")
-recent = health[health["run_at"] >= pd.Timestamp.utcnow().tz_localize("UTC") - pd.Timedelta(days=14)].copy()
+run_at_utc = pd.to_datetime(health["run_at"], utc=True, errors="coerce")
+cutoff = pd.Timestamp.now(tz="UTC") - pd.Timedelta(days=14)
+recent = health[run_at_utc >= cutoff].copy()
 if recent.empty:
     st.caption("No runs in the last 14 days.")
 else:

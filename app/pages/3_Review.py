@@ -94,6 +94,7 @@ with bulk_c[2]:
                 notes="bulk approve",
             )
         st.cache_data.clear()
+        st.session_state[idx_key] = 0
         st.success(f"Approved {n} articles.")
         st.rerun()
 with bulk_c[3]:
@@ -293,6 +294,8 @@ with st.form(f"review_form_{row['raw_id']}"):
         )
         st.cache_data.clear()
         st.success("Saved.")
-        if approve or reject:
+        # Don't advance idx on approve/reject — the article leaves the queue,
+        # so idx naturally points to the next pending article on rerun.
+        if save_only:
             st.session_state[idx_key] = min(len(queue) - 1, idx + 1)
         st.rerun()
