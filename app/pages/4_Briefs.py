@@ -56,15 +56,15 @@ with gen_tab:
         ("MTD", today.replace(day=1), today),
         ("QTD", _dt.date(today.year, quarter_start_month, 1), today),
     ]
-    if "_brief_date_range" not in st.session_state:
-        st.session_state["_brief_date_range"] = (today - _dt.timedelta(days=29), today)
+    if "_brief_dr" not in st.session_state:
+        st.session_state["_brief_dr"] = (today - _dt.timedelta(days=29), today)
 
     st.caption("Quick range")
     preset_cols = st.columns(len(presets))
     for i, (label, start, end) in enumerate(presets):
         with preset_cols[i]:
             if st.button(label, key=f"_preset_{i}", width="stretch"):
-                st.session_state["_brief_date_range"] = (start, end)
+                st.session_state["_brief_dr"] = (start, end)
                 st.rerun()
 
     with st.form("brief_form"):
@@ -72,7 +72,6 @@ with gen_tab:
         with r1[0]:
             date_range = st.date_input(
                 "Date range",
-                value=st.session_state["_brief_date_range"],
                 max_value=today,
                 key="_brief_dr",
             )
