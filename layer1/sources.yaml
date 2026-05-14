@@ -547,8 +547,8 @@ sources:
   - finance
   language: en
   paywall_status: paywalled
-  active: true
-  notes: Paywalled
+  active: false
+  notes: Paywalled — direct scrape blocked (403). Use "Bloomberg Africa (via Google News)" instead.
 - name: MoneyWeb
   url: https://www.moneyweb.co.za/category/news/africa
   rss_url: null
