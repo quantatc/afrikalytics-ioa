@@ -4,6 +4,7 @@ from __future__ import annotations
 
 # ruff: noqa: E402
 
+import datetime as _dt
 import os
 import sys
 import time
@@ -46,10 +47,35 @@ with gen_tab:
     except Exception:
         source_opts = []
 
+    today = _dt.date.today()
+    quarter_start_month = ((today.month - 1) // 3) * 3 + 1
+    presets = [
+        ("Last 7d", today - _dt.timedelta(days=6), today),
+        ("Last 14d", today - _dt.timedelta(days=13), today),
+        ("Last 30d", today - _dt.timedelta(days=29), today),
+        ("MTD", today.replace(day=1), today),
+        ("QTD", _dt.date(today.year, quarter_start_month, 1), today),
+    ]
+    if "_brief_date_range" not in st.session_state:
+        st.session_state["_brief_date_range"] = (today - _dt.timedelta(days=29), today)
+
+    st.caption("Quick range")
+    preset_cols = st.columns(len(presets))
+    for i, (label, start, end) in enumerate(presets):
+        with preset_cols[i]:
+            if st.button(label, key=f"_preset_{i}", width="stretch"):
+                st.session_state["_brief_date_range"] = (start, end)
+                st.rerun()
+
     with st.form("brief_form"):
         r1 = st.columns(3)
         with r1[0]:
-            period_days = st.number_input("Window (days)", min_value=1, max_value=180, value=30)
+            date_range = st.date_input(
+                "Date range",
+                value=st.session_state["_brief_date_range"],
+                max_value=today,
+                key="_brief_dr",
+            )
         with r1[1]:
             min_rel = st.number_input("Min relevance", min_value=1, max_value=5, value=3)
         with r1[2]:
@@ -82,7 +108,17 @@ with gen_tab:
         submit = st.form_submit_button("Queue brief", type="primary", width="stretch")
 
     if submit:
+        if isinstance(date_range, (tuple, list)) and len(date_range) == 2:
+            start_date, end_date = date_range
+        else:
+            start_date = end_date = date_range  # single-date safety net
+        if start_date > end_date:
+            start_date, end_date = end_date, start_date
+        period_days = (end_date - start_date).days + 1
+
         params = {
+            "start_date": start_date.isoformat(),
+            "end_date": end_date.isoformat(),
             "period_days": int(period_days),
             "min_relevance": int(min_rel),
             "max_articles": int(max_articles),
@@ -146,9 +182,13 @@ with queue_tab:
                     for k, v in params.items()
                     if _fmt(v) and k in ("country", "region", "sector", "theme", "event_type", "source")
                 ) or "no filters"
+                if params.get("start_date") and params.get("end_date"):
+                    window_label = f"{params['start_date']} → {params['end_date']}"
+                else:
+                    window_label = f"{params.get('period_days', '?')}d"
                 st.markdown(
                     f"**#{j['id']}** · <span style='color:{color};font-weight:600;'>{status}</span> · "
-                    f"<span style='color:#9AA0A6;font-size:12px;'>{params.get('period_days', '?')}d · min rel {params.get('min_relevance', '?')} · {filt_label}</span>",
+                    f"<span style='color:#9AA0A6;font-size:12px;'>{window_label} · min rel {params.get('min_relevance', '?')} · {filt_label}</span>",
                     unsafe_allow_html=True,
                 )
             with head[1]:

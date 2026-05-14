@@ -324,18 +324,26 @@ def run(
     theme=None,
     event_type=None,
     source=None,
+    start_date: str | None = None,
+    end_date: str | None = None,
     no_db_write: bool = False,
 ) -> dict:
     if "OPENAI_API_KEY" not in os.environ:
         raise RuntimeError("OPENAI_API_KEY is required")
-    if period_days <= 0:
-        raise ValueError("period_days must be > 0")
 
     client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
     db, db_type = connect_db(mode)
 
-    end_dt = now_utc()
-    start_dt = end_dt - timedelta(days=period_days)
+    if start_date and end_date:
+        start_dt = datetime.fromisoformat(str(start_date)).replace(tzinfo=timezone.utc)
+        # Include the end date fully (up to 23:59:59)
+        end_dt = datetime.fromisoformat(str(end_date)).replace(tzinfo=timezone.utc) + timedelta(days=1) - timedelta(seconds=1)
+        period_days = max(1, (end_dt.date() - start_dt.date()).days + 1)
+    else:
+        if period_days <= 0:
+            raise ValueError("period_days must be > 0")
+        end_dt = now_utc()
+        start_dt = end_dt - timedelta(days=period_days)
     def _as_list(v):
         if not v:
             return []

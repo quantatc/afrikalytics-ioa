@@ -111,6 +111,8 @@ def _run_brief_job(mode: str, job_id: int) -> None:
             theme=params.get("theme") or None,
             event_type=params.get("event_type") or None,
             source=params.get("source") or None,
+            start_date=params.get("start_date") or None,
+            end_date=params.get("end_date") or None,
             no_db_write=True,
         )
 
@@ -147,7 +149,13 @@ def _run_brief_job(mode: str, job_id: int) -> None:
                 title_parts.append(label)
         if not title_parts:
             title_parts.append("Pan-Africa")
-        title = f"IOA Brief — {' / '.join(title_parts)} ({params.get('period_days', 30)}d)"
+
+        window_label = ""
+        if params.get("start_date") and params.get("end_date"):
+            window_label = f"{params['start_date']} → {params['end_date']}"
+        elif params.get("period_days"):
+            window_label = f"{params['period_days']}d"
+        title = f"IOA Brief — {' / '.join(title_parts)}" + (f" ({window_label})" if window_label else "")
 
         brief_id = insert_brief(
             mode=mode,
