@@ -173,6 +173,31 @@ def fetch_health(mode: str) -> pd.DataFrame:
     return df
 
 
+def list_enriched_sources(mode: str, days: int = 60) -> list[str]:
+    """Distinct source_name values present in enriched_articles within the window."""
+    conn, db_type = connect_db(mode)
+    cutoff = _cutoff(days).isoformat()
+    rows = _rows(
+        conn,
+        db_type,
+        (
+            "SELECT DISTINCT r.source_name FROM enriched_articles e "
+            "JOIN raw_articles r ON r.id = e.raw_id "
+            "WHERE e.enriched_at >= ? AND r.source_name IS NOT NULL AND TRIM(r.source_name) != '' "
+            "ORDER BY r.source_name"
+        ),
+        (
+            "SELECT DISTINCT r.source_name FROM enriched_articles e "
+            "JOIN raw_articles r ON r.id = e.raw_id "
+            "WHERE e.enriched_at >= %s AND r.source_name IS NOT NULL AND TRIM(r.source_name) != '' "
+            "ORDER BY r.source_name"
+        ),
+        sqlite_params=(cutoff,),
+        pg_params=(cutoff,),
+    )
+    return [r["source_name"] for r in rows if r.get("source_name")]
+
+
 def save_tag_audit(
     mode: str,
     raw_id: int,

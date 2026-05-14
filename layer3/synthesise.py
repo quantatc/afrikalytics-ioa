@@ -149,12 +149,14 @@ def apply_filters(
     sector=None,
     theme=None,
     event_type=None,
+    source=None,
 ) -> list[dict]:
     countries = _normalize(country, lower=False)
     regions = _normalize(region)
     sectors = _normalize(sector)
     themes = _normalize(theme)
     events = _normalize(event_type)
+    sources = _normalize(source)
 
     out = []
     for row in rows:
@@ -167,6 +169,8 @@ def apply_filters(
         if themes and not (themes & {str(t).lower() for t in row.get("themes", [])}):
             continue
         if events and not (events & {str(e).lower() for e in row.get("event_types", [])}):
+            continue
+        if sources and str(row.get("source_name") or "").lower() not in sources:
             continue
         out.append(row)
     return out
@@ -319,6 +323,7 @@ def run(
     sector=None,
     theme=None,
     event_type=None,
+    source=None,
     no_db_write: bool = False,
 ) -> dict:
     if "OPENAI_API_KEY" not in os.environ:
@@ -346,6 +351,7 @@ def run(
         "sector": _as_list(sector),
         "theme": _as_list(theme),
         "event_type": _as_list(event_type),
+        "source": _as_list(source),
     }
 
     rows = fetch_enriched_with_raw(
@@ -356,7 +362,7 @@ def run(
         min_relevance=min_relevance,
         max_articles=max_articles,
     )
-    rows = apply_filters(rows, country=country, region=region, sector=sector, theme=theme, event_type=event_type)
+    rows = apply_filters(rows, country=country, region=region, sector=sector, theme=theme, event_type=event_type, source=source)
     rows = rows[:max_articles]
 
     if not rows:
@@ -417,6 +423,7 @@ if __name__ == "__main__":
     parser.add_argument("--sector")
     parser.add_argument("--theme")
     parser.add_argument("--event-type")
+    parser.add_argument("--source")
     parser.add_argument("--no-db-write", action="store_true")
     args = parser.parse_args()
 
@@ -431,5 +438,6 @@ if __name__ == "__main__":
         sector=args.sector,
         theme=args.theme,
         event_type=args.event_type,
+        source=args.source,
         no_db_write=args.no_db_write,
     )

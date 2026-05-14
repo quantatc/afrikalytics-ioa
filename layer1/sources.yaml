@@ -96,6 +96,52 @@ sources:
   gdelt_max_retries: 3
   gdelt_query: Africa
   notes: Simple explicit query — avoids GDELT 200-char limit on complex boolean queries.
+- name: Moneyweb
+  url: https://www.moneyweb.co.za/
+  rss_url: https://www.moneyweb.co.za/feed/
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - business
+  - finance
+  language: en
+  paywall_status: open
+  active: true
+  notes: South African business/finance — free RSS for headlines and summaries.
+- name: Business Day (BD Live)
+  url: https://www.businesslive.co.za/bd/
+  rss_url: https://www.businesslive.co.za/feeds/bd/
+  type: rss+scraper
+  source_tier: country-specific
+  region: southern-africa
+  countries:
+  - ZA
+  sectors:
+  - business
+  - finance
+  - politics
+  language: en
+  paywall_status: restricted
+  active: true
+  notes: South African business daily — RSS gives headlines+summaries; full text paywalled.
+- name: Bloomberg Africa (via Google News)
+  url: https://news.google.com/search?q=site%3Abloomberg.com+africa
+  rss_url: https://news.google.com/rss/search?q=site%3Abloomberg.com+(africa+OR+nigeria+OR+kenya+OR+ghana+OR+egypt+OR+%22south+africa%22)&hl=en&gl=US&ceid=US:en
+  type: rss
+  source_tier: pan-africa
+  region: pan-africa
+  countries: []
+  sectors:
+  - business
+  - finance
+  - markets
+  language: en
+  paywall_status: restricted
+  active: true
+  notes: Google News aggregator filtered to Bloomberg's Africa coverage. Links resolve to bloomberg.com (paywalled full article).
 - name: Al Jazeera Africa
   url: https://www.aljazeera.com/africa/
   rss_url: https://www.aljazeera.com/xml/rss/all.xml

@@ -19,7 +19,7 @@ if str(REPO_ROOT) not in sys.path:
 from app.state import bootstrap
 from ioa_core.countries import AFRICAN_COUNTRY_CODE_TO_NAME, country_display_name
 from ioa_core.jobs import enqueue_brief_job, get_job, list_jobs, spawn_worker
-from ioa_core.repository import delete_brief, fetch_brief, list_briefs
+from ioa_core.repository import delete_brief, fetch_brief, list_briefs, list_enriched_sources
 from ioa_core.taxonomy import dimension_values, sector_values
 
 
@@ -41,6 +41,10 @@ with gen_tab:
     sector_opts = sector_values(taxonomy)
     theme_opts = dimension_values("themes", taxonomy)
     event_opts = dimension_values("event_types", taxonomy)
+    try:
+        source_opts = list_enriched_sources(mode, days=90)
+    except Exception:
+        source_opts = []
 
     with st.form("brief_form"):
         r1 = st.columns(3)
@@ -68,6 +72,13 @@ with gen_tab:
         with r3[1]:
             event_types = st.multiselect("Events", event_opts)
 
+        r4 = st.columns(1)
+        with r4[0]:
+            sources = st.multiselect(
+                "Sources", source_opts,
+                help="Empty = all sources. Pulls from sources that have enriched articles in the last 90 days.",
+            )
+
         submit = st.form_submit_button("Queue brief", type="primary", width="stretch")
 
     if submit:
@@ -80,6 +91,7 @@ with gen_tab:
             "sector": sectors,
             "theme": themes,
             "event_type": event_types,
+            "source": sources,
         }
         job_id = enqueue_brief_job(mode, params, author)
         spawn_worker(mode, job_id)
@@ -132,7 +144,7 @@ with queue_tab:
                 filt_label = " · ".join(
                     f"{k}={_fmt(v)}"
                     for k, v in params.items()
-                    if _fmt(v) and k in ("country", "region", "sector", "theme", "event_type")
+                    if _fmt(v) and k in ("country", "region", "sector", "theme", "event_type", "source")
                 ) or "no filters"
                 st.markdown(
                     f"**#{j['id']}** · <span style='color:{color};font-weight:600;'>{status}</span> · "

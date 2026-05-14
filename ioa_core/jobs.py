@@ -110,6 +110,7 @@ def _run_brief_job(mode: str, job_id: int) -> None:
             sector=params.get("sector") or None,
             theme=params.get("theme") or None,
             event_type=params.get("event_type") or None,
+            source=params.get("source") or None,
             no_db_write=True,
         )
 
